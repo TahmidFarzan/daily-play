@@ -7,8 +7,15 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "inertiajs/inertia-laravel": "^3.3",
         "laravel/framework": "^13.17",
-        "laravel/tinker": "^3.0"
+        "laravel/tinker": "^3.0",
+        "opcodesio/log-viewer": "^3.24",
+        "romanzipp/laravel-queue-monitor": "^5.4",
+        "spatie/laravel-activitylog": "^5.1",
+        "spatie/laravel-medialibrary": "^11.23",
+        "spatie/laravel-sluggable": "^4.0",
+        "tightenco/ziggy": "^2.6"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
