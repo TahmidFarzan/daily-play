@@ -15,13 +15,13 @@ return [
      * When the clean command is executed, all recording activities older than
      * the number of days specified here will be deleted.
      */
-    'clean_after_days' => 365,
+    'clean_after_days' => env("ACTIVITYLOG_CLEAN_AFTER_DAYS",90),
 
     /*
      * If no log name is passed to the activity() helper
      * we use this default log name.
      */
-    'default_log_name' => 'default',
+    'default_log_name' => env("ACTIVITYLOG_DEFAULT_LOG_NAME","default"),
 
     /*
      * You can specify an auth driver here that gets user models.

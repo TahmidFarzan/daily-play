@@ -33,7 +33,7 @@ return [
      * The disk on which to store added files and derived images by default. Choose
      * one or more of the disks you've configured in config/filesystems.php.
      */
-    'disk_name' => env('MEDIA_DISK', 'public'),
+    'disk_name' => env('MEDIA_LIBRARY_MEDIA_DISK', 'public'),
 
     /*
      * The disk on which to store conversions (thumbnails, etc.) and responsive images
@@ -78,7 +78,7 @@ return [
      * This queue connection will be used to generate derived and responsive images.
      * Leave empty to use the default queue connection.
      */
-    'queue_connection_name' => env('QUEUE_CONNECTION', 'sync'),
+    'queue_connection_name' => env('MEDIA_LIBRARY_MEDIA_QUEUE_CONNECTION', 'sync'),
 
     /*
      * This queue will be used to generate derived and responsive images.
@@ -89,7 +89,7 @@ return [
     /*
      * By default all conversions will be performed on a queue.
      */
-    'queue_conversions_by_default' => env('QUEUE_CONVERSIONS_BY_DEFAULT', true),
+    'queue_conversions_by_default' => env('MEDIA_LIBRARY_QUEUE_CONVERSIONS_BY_DEFAULT', true),
 
     /*
      * Should database transactions be run after database commits?
@@ -242,7 +242,7 @@ return [
      * The engine that should perform the image conversions.
      * Should be either `gd`, `imagick` or `vips`.
      */
-    'image_driver' => env('IMAGE_DRIVER', 'gd'),
+    'image_driver' => env('MEDIA_LIBRARY_IMAGE_DRIVER', 'gd'),
 
     /*
      * FFMPEG & FFProbe binaries paths, only used if you try to generate video
@@ -336,7 +336,7 @@ return [
      * the Media Library Pro Vue and React components to move uploaded files
      * in a S3 bucket to their right place.
      */
-    'enable_vapor_uploads' => env('ENABLE_MEDIA_LIBRARY_VAPOR_UPLOADS', false),
+    'enable_vapor_uploads' => env('MEDIA_LIBRARY_ENABLE_VAPOR_UPLOADS', false),
 
     /*
      * When converting Media instances to response the media library will add
@@ -353,7 +353,7 @@ return [
      * You can specify a prefix for that is used for storing all media.
      * If you set this to `/my-subdir`, all your media will be stored in a `/my-subdir` directory.
      */
-    'prefix' => env('MEDIA_PREFIX', ''),
+    'prefix' => env('MEDIA_LIBRARY_MEDIA_PREFIX', ''),
 
     /*
      * When forcing lazy loading, media will be loaded even if you don't eager load media and you have
