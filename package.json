@@ -24,6 +24,7 @@
         "@inertiajs/vue3": "^3.7.0",
         "@tinymce/tinymce-vue": "^6.3.0",
         "date-fns": "^4.4.0",
+        "fontaine": "^0.8.1",
         "tinymce": "^8.9.0",
         "vue-multiselect": "^3.5.0",
         "vue-sonner": "^2.0.9",
