@@ -15,15 +15,7 @@ class MediaHelper
     public const ROLE_APP_LOGO_IMAGE    = 'App Logo Image';
     public const ROLE_APP_FAVICON_IMAGE = 'App Favicon Image';
 
-    public const ROLE_NEWS_FEATURE_IMAGE        = 'News Feature Image';
-    public const ROLE_NEWS_FEATURE_IMAGE_MOBILE = 'News Feature Image (Mobile)';
-
-    public const ROLE_NEWS_CONTENT_IMAGE = 'News Content Image';
-
-    public const ROLE_NEWS_GALLERY_IMAGE = 'News Gallery Image';
-
-    public const ROLE_EVENT_BANNER_IMAGE_DESKTOP = 'Event Banner Image (Desktop)';
-    public const ROLE_EVENT_BANNER_IMAGE_MOBILE  = 'Event Banner Image (Mobile)';
+    public const ROLE_GAME_LOGO = 'Game Logo';
 
     public static function mediaRoles(): Collection
     {
@@ -34,14 +26,7 @@ class MediaHelper
 
             self::ROLE_APP_LOGO_IMAGE,
             self::ROLE_APP_FAVICON_IMAGE,
-
-            self::ROLE_NEWS_FEATURE_IMAGE,
-            self::ROLE_NEWS_FEATURE_IMAGE_MOBILE,
-            self::ROLE_NEWS_CONTENT_IMAGE,
-            self::ROLE_NEWS_GALLERY_IMAGE,
-
-            self::ROLE_EVENT_BANNER_IMAGE_DESKTOP,
-            self::ROLE_EVENT_BANNER_IMAGE_MOBILE,
+            self::ROLE_GAME_LOGO
         ]);
     }
 
