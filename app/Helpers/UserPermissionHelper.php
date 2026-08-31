@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Helpers;
 
 use Illuminate\Support\Collection;
@@ -16,11 +17,13 @@ class UserPermissionHelper
     public const ACCESS_FORCE_DELETE = 'Force delete';
 
     public const MODULE_USER            = 'User';
+    public const MODULE_GAME_DIFFICULTY = 'Game Difficulty';
 
     public static function modules(): Collection
     {
         return SystemHelper::toOptions([
             self::MODULE_USER,
+            self::MODULE_GAME_DIFFICULTY,
         ]);
     }
 
@@ -42,6 +45,13 @@ class UserPermissionHelper
             ]);
         }
 
+        if ($moduleName == self::MODULE_GAME_DIFFICULTY) {
+            return SystemHelper::toOptions([
+                self::ACCESS_VIEW_ANY,
+                self::ACCESS_VIEW,
+            ]);
+        }
+
         return SystemHelper::toOptions([
             self::ACCESS_VIEW_ANY,
             self::ACCESS_VIEW,
@@ -55,5 +65,4 @@ class UserPermissionHelper
     {
         return $moduleName . self::SEPARATOR . $accessName;
     }
-
 }

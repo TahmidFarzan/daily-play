@@ -17,5 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call(UserPermissionSeeder::class);
 
         $this->call(UserSeeder::class);
+
+        $this->call(GameDifficultySeeder::class);
     }
 }

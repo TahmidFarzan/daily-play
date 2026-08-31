@@ -6,6 +6,7 @@ const { clearByPrefix } = useApiCache()
 
 export const groups = {
     User: 'User',
+    GameDifficulty: "Game Difficulty"
 }
 
 export const access = {
@@ -103,6 +104,9 @@ export const canDeleteUser = async (authUser, user) => {
         access.ForceDelete
     )
 }
+
+export const canAccessGameDifficulty = async (authUser) => hasPermission(authUser, groups.GameDifficulty, access.ViewAny)
+export const canViewGameDifficulty = async (authUser) => hasPermission(authUser, groups.GameDifficulty, access.View)
 
 export const canAccessActivityLog = async (authUser) => authUser?.is_super_admin
 export const canDeleteActivityLog = async (authUser) => authUser?.is_super_admin
