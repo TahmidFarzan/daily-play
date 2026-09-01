@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faCircleCheck } from '@fortawesome/free-solid-svg-icons'
 
 import { useZipPlay } from '@/composables/useZipPlay'
+import { segmentColorAt } from '@/composables/progressColors'
 
 FontAwesomeLibrary.add(faCircleCheck)
 
@@ -168,13 +169,19 @@ const pointFor = (row, col) => {
     return point
 }
 
-const linePoints = computed(() => path.value.map(
-    (cell) => {
-        const point = pointFor(cell.row, cell.col)
+const segments = computed(() => path.value.slice(0, -1).map((cell, index) => {
+    const next = path.value[index + 1]
 
-        return `${point.x},${point.y}`
-    },
-).join(' '))
+    return {
+        from: pointFor(cell.row, cell.col),
+        to: pointFor(next.row, next.col),
+        color: segmentColorAt(index),
+    }
+}))
+
+const glowColor = computed(() => (segments.value.length > 0
+    ? segments.value[segments.value.length - 1].color
+    : 'var(--daily-play-accent)'))
 
 const nodeRadius = computed(() => metrics.cell * 0.13)
 const headRadius = computed(() => metrics.cell * 0.2)
@@ -259,14 +266,24 @@ const wallStyle = (wall) => {
                     aria-hidden="true"
                     :viewBox="svgViewBox"
                 >
-                    <polyline
+                    <g
                         v-if="path.length > 1"
                         :class="{ 'path-complete': complete }"
-                        :points="linePoints"
-                        fill="none"
-                        style="stroke: var(--daily-play-accent); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round;"
-                        vector-effect="non-scaling-stroke"
-                    />
+                        :style="{ '--path-glow-color': glowColor }"
+                    >
+                        <line
+                            v-for="(segment, index) in segments"
+                            :key="`segment-${index}`"
+                            :x1="segment.from.x"
+                            :y1="segment.from.y"
+                            :x2="segment.to.x"
+                            :y2="segment.to.y"
+                            :stroke="segment.color"
+                            stroke-width="5"
+                            stroke-linecap="round"
+                            vector-effect="non-scaling-stroke"
+                        />
+                    </g>
 
                     <circle
                         v-for="(cell, index) in path"
@@ -274,7 +291,7 @@ const wallStyle = (wall) => {
                         :cx="pointFor(cell.row, cell.col).x"
                         :cy="pointFor(cell.row, cell.col).y"
                         :r="nodeRadius"
-                        fill="var(--daily-play-accent)"
+                        fill="var(--daily-play-accent-active)"
                     />
 
                     <circle
@@ -320,20 +337,20 @@ const wallStyle = (wall) => {
 <style scoped>
 .path-complete {
     animation: path-complete-pulse 0.7s ease-out;
-    filter: drop-shadow(0 0 6px var(--daily-play-accent));
+    filter: drop-shadow(0 0 6px var(--path-glow-color));
 }
 
 @keyframes path-complete-pulse {
     0% {
-        filter: drop-shadow(0 0 0 var(--daily-play-accent));
+        filter: drop-shadow(0 0 0 var(--path-glow-color));
     }
 
     50% {
-        filter: drop-shadow(0 0 10px var(--daily-play-accent));
+        filter: drop-shadow(0 0 10px var(--path-glow-color));
     }
 
     100% {
-        filter: drop-shadow(0 0 6px var(--daily-play-accent));
+        filter: drop-shadow(0 0 6px var(--path-glow-color));
     }
 }
 </style>
