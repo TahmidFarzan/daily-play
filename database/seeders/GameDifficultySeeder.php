@@ -28,7 +28,7 @@ class GameDifficultySeeder extends Seeder
             GameDifficulty::truncate();
         }
 
-        $difficulties = SeederHelper::GAME_DIFFCULTY;
+        $difficulties = SeederHelper::GAME_DIFFCULTIES;
 
         foreach ($difficulties as $difficulty) {
             GameDifficulty::factory()->state([

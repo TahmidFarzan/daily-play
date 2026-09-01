@@ -15,7 +15,7 @@ class GameDifficultyFactory extends Factory
     public function definition(): array
     {
         $adminUser = User::where('is_super_admin', true)->inRandomOrder()->first();
-        $difficulties = SeederHelper::GAME_DIFFCULTY;
+        $difficulties = SeederHelper::GAME_DIFFCULTIES;
 
         $difficulty = $this->faker->randomElement($difficulties);
 

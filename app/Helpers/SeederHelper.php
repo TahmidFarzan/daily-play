@@ -4,7 +4,7 @@ namespace App\Helpers;
 
 class SeederHelper
 {
-    public const GAME_DIFFCULTY = [
+    public const GAME_DIFFCULTIES = [
         [
             'name' => 'Easy',
             'brief' => 'A beginner-friendly difficulty level with more time and hints available.',
@@ -16,6 +16,13 @@ class SeederHelper
         [
             'name' => 'Hard',
             'brief' => 'A challenging difficulty level for experienced players.',
+        ],
+    ];
+
+    public const GAMEs = [
+        [
+            'name' => 'Easy',
+            'brief' => 'A beginner-friendly difficulty level with more time and hints available.',
         ],
     ];
 }
