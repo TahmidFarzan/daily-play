@@ -1,6 +1,6 @@
 import { onBeforeUnmount, ref } from 'vue'
 
-export function useSolveTimer() {
+export function useGamePlayTimer() {
     let startedAtMs = Date.now()
     let stopped = false
     let ticker = null

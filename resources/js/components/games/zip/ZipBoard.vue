@@ -3,9 +3,9 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 
 import { library as FontAwesomeLibrary } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faCircleCheck, faRotateLeft } from '@fortawesome/free-solid-svg-icons'
+import { faCircleCheck } from '@fortawesome/free-solid-svg-icons'
 
-FontAwesomeLibrary.add(faCircleCheck, faRotateLeft)
+FontAwesomeLibrary.add(faCircleCheck)
 
 const emit = defineEmits(['completed'])
 
@@ -62,23 +62,48 @@ const cells = computed(() => {
     return list
 })
 
-const startKey = computed(() => {
-    const startClue = (board?.clues || []).find((clue) => clue.number === 1)
-
-    return startClue ? cellKey(startClue.row, startClue.col) : null
-})
-
 const totalCells = computed(() => rows.value * cols.value)
 
-const pathKeys = ref([])
-const dragging = ref(false)
-const activePointerId = ref(null)
+const startCell = computed(() => {
+    const startClue = (board?.clues || []).find((clue) => clue.number === 1)
+
+    return startClue ? { row: startClue.row, col: startClue.col } : null
+})
+
+const goalKey = computed(() => {
+    let highest = null
+
+    for (const clue of board?.clues || []) {
+        if (!highest || clue.number > highest.number) highest = clue
+    }
+
+    return highest ? cellKey(highest.row, highest.col) : null
+})
+
+const path = ref([])
+const currentCell = ref(null)
+const isDragging = ref(false)
 const complete = ref(false)
+const backtrackCount = ref(0)
 
-let nextClueNumber = 2
+let activePointerId = null
+let backtrackingInGesture = false
 
-const pathSet = computed(() => new Set(pathKeys.value))
-const tipKey = computed(() => pathKeys.value[pathKeys.value.length - 1] ?? null)
+const boardEl = ref(null)
+
+const pathIndex = (row, col) => path.value.findIndex((cell) => cell.row === row && cell.col === col)
+
+const nextClue = computed(() => {
+    let highest = 0
+
+    for (const cell of path.value) {
+        const clue = clueMap.value[cellKey(cell.row, cell.col)]
+
+        if (clue) highest = Math.max(highest, clue)
+    }
+
+    return highest + 1
+})
 
 const cellFromPoint = (clientX, clientY) => {
     const el = boardEl.value
@@ -115,109 +140,130 @@ const blocksMove = (fromRow, fromCol, toRow, toCol) => {
     return wallKey !== null && wallSet.value.has(wallKey)
 }
 
-const canMove = (toRow, toCol) => {
-    const [fromRow, fromCol] = tipKey.value.split(':').map(Number)
+const isAdjacent = (fromRow, fromCol, toRow, toCol) =>
+    Math.abs(toRow - fromRow) + Math.abs(toCol - fromCol) === 1
 
-    if (toRow < 0 || toRow >= rows.value || toCol < 0 || toCol >= cols.value) return false
+const finish = () => {
+    complete.value = true
+    isDragging.value = false
+    activePointerId = null
 
-    if (pathSet.value.has(cellKey(toRow, toCol))) return false
-
-    if (Math.abs(toRow - fromRow) + Math.abs(toCol - fromCol) !== 1) return false
-
-    if (blocksMove(fromRow, fromCol, toRow, toCol)) return false
-
-    const clue = clueMap.value[cellKey(toRow, toCol)]
-
-    return clue === null || clue === undefined || clue === nextClueNumber
+    emit('completed', {
+        path: path.value.map((cell) => ({ ...cell })),
+        backtrackCount: backtrackCount.value,
+    })
 }
 
-const append = (row, col) => {
-    pathKeys.value.push(cellKey(row, col))
+const moveTo = (row, col) => {
+    if (complete.value || !currentCell.value) return false
+
+    if (currentCell.value.row === row && currentCell.value.col === col) return false
+
+    const index = pathIndex(row, col)
+
+    if (index !== -1) {
+        path.value.splice(index + 1)
+        currentCell.value = { row, col }
+
+        if (!backtrackingInGesture) {
+            backtrackCount.value += 1
+            backtrackingInGesture = true
+        }
+
+        return true
+    }
+
+    if (!isAdjacent(currentCell.value.row, currentCell.value.col, row, col)) return false
+
+    if (blocksMove(currentCell.value.row, currentCell.value.col, row, col)) return false
 
     const clue = clueMap.value[cellKey(row, col)]
 
-    if (clue === nextClueNumber) {
-        nextClueNumber += 1
+    if (clue && clue !== nextClue.value) return false
+
+    path.value.push({ row, col })
+    currentCell.value = { row, col }
+    backtrackingInGesture = false
+
+    if (path.value.length === totalCells.value) {
+        finish()
     }
 
-    if (pathKeys.value.length === totalCells.value) {
-        complete.value = true
-        dragging.value = false
-        activePointerId.value = null
-        emit('completed')
-    }
+    return true
 }
 
-const extendTo = (target) => {
+const stepToward = (target) => {
+    const head = currentCell.value
+
+    if (!head || (head.row === target.row && head.col === target.col)) return null
+
+    const deltaRow = target.row - head.row
+    const deltaCol = target.col - head.col
+
+    const horizontal = deltaCol !== 0 ? { row: head.row, col: head.col + Math.sign(deltaCol) } : null
+    const vertical = deltaRow !== 0 ? { row: head.row + Math.sign(deltaRow), col: head.col } : null
+    const candidates = [horizontal, vertical].filter(Boolean)
+
+    const inPath = candidates.find((cell) => pathIndex(cell.row, cell.col) !== -1)
+
+    if (inPath) return inPath
+
+    if (Math.abs(deltaRow) > Math.abs(deltaCol)) return vertical ?? horizontal
+
+    return horizontal ?? vertical
+}
+
+const traceToward = (target) => {
     let guard = totalCells.value
 
     while (guard > 0) {
-        const [tipRow, tipCol] = tipKey.value.split(':').map(Number)
+        if (complete.value) return
 
-        if (tipRow === target.row && tipCol === target.col) break
+        const step = stepToward(target)
 
-        const deltaCol = target.col - tipCol
-        const deltaRow = target.row - tipRow
+        if (!step) return
 
-        let nextRow = tipRow
-        let nextCol = tipCol
+        if (!moveTo(step.row, step.col)) return
 
-        if (deltaCol !== 0) {
-            nextCol = tipCol + Math.sign(deltaCol)
-        } else if (deltaRow !== 0) {
-            nextRow = tipRow + Math.sign(deltaRow)
-        } else {
-            break
-        }
-
-        if (!canMove(nextRow, nextCol)) break
-
-        append(nextRow, nextCol)
         guard -= 1
     }
 }
 
 const onPointerDown = (event) => {
-    if (disabled || complete.value || dragging.value) return
+    if (disabled || complete.value || isDragging.value) return
 
     const cell = cellFromPoint(event.clientX, event.clientY)
 
-    if (!cell || cellKey(cell.row, cell.col) !== startKey.value) return
+    if (!cell || !startCell.value) return
 
-    dragging.value = true
-    activePointerId.value = event.pointerId
-    pathKeys.value = [startKey.value]
-    nextClueNumber = 2
+    if (cell.row !== startCell.value.row || cell.col !== startCell.value.col) return
+
+    isDragging.value = true
+    activePointerId = event.pointerId
+    backtrackingInGesture = false
+    path.value = [{ row: startCell.value.row, col: startCell.value.col }]
+    currentCell.value = { row: startCell.value.row, col: startCell.value.col }
 
     boardEl.value?.setPointerCapture?.(event.pointerId)
     event.preventDefault()
 }
 
 const onPointerMove = (event) => {
-    if (!dragging.value || event.pointerId !== activePointerId.value) return
+    if (!isDragging.value || event.pointerId !== activePointerId) return
 
     const target = cellFromPoint(event.clientX, event.clientY)
 
     if (target) {
-        extendTo(target)
+        traceToward(target)
     }
 }
 
 const onPointerEnd = (event) => {
-    if (!dragging.value || event.pointerId !== activePointerId.value) return
+    if (!isDragging.value || event.pointerId !== activePointerId) return
 
-    dragging.value = false
-    activePointerId.value = null
+    isDragging.value = false
+    activePointerId = null
 }
-
-const resetPath = () => {
-    if (disabled || complete.value) return
-
-    pathKeys.value = startKey.value ? [startKey.value] : []
-    nextClueNumber = 2
-}
-
-const boardEl = ref(null)
 
 const computeMetrics = () => {
     if (!boardEl.value || cols.value <= 0) return
@@ -238,36 +284,61 @@ onBeforeUnmount(() => {
     window.removeEventListener('resize', onResize)
 })
 
+const step = computed(() => metrics.cell + metrics.gap)
+
+const svgWidth = computed(() => cols.value * metrics.cell + (cols.value - 1) * metrics.gap + 2)
+const svgHeight = computed(() => rows.value * metrics.cell + (rows.value - 1) * metrics.gap + 2)
+const svgViewBox = computed(() => `0 0 ${svgWidth.value} ${svgHeight.value}`)
+
+const pointFor = (row, col) => {
+    const point = {
+        x: 1 + col * step.value + metrics.cell / 2,
+        y: 1 + row * step.value + metrics.cell / 2,
+    }
+
+    return point
+}
+
+const linePoints = computed(() => path.value.map(
+    (cell) => {
+        const point = pointFor(cell.row, cell.col)
+
+        return `${point.x},${point.y}`
+    },
+).join(' '))
+
+const nodeRadius = computed(() => metrics.cell * 0.13)
+const headRadius = computed(() => metrics.cell * 0.2)
+
 const cellClass = (cell) => {
-    const key = cellKey(cell.row, cell.col)
-    const base = 'relative flex aspect-square items-center justify-center rounded-[4px] text-sm font-semibold transition-colors sm:text-base'
+    const base = 'relative flex aspect-square items-center justify-center rounded-[4px] bg-[var(--daily-play-surface)] text-sm font-semibold transition-colors sm:text-base'
 
     if (cell.clue !== null) {
-        return `${base} bg-[var(--daily-play-accent)] text-white`
+        return `${base} text-[var(--daily-play-accent-active)]`
     }
 
-    if (key === tipKey.value) {
-        return `${base} bg-[var(--daily-play-accent-soft)] text-[var(--daily-play-accent-active)] ring-2 ring-inset ring-[var(--daily-play-accent)]`
+    return `${base} text-[var(--daily-play-text-muted)]`
+}
+
+const cellEmphasis = (cell) => {
+    if (cellKey(cell.row, cell.col) === goalKey.value) {
+        return 'bg-[var(--daily-play-accent-soft)] inset-ring-2 inset-ring-[var(--daily-play-accent)]'
     }
 
-    if (key === startKey.value) {
-        return `${base} bg-[var(--daily-play-accent-soft)] text-[var(--daily-play-accent-active)]`
+    if (startCell.value && cellKey(cell.row, cell.col) === cellKey(startCell.value.row, startCell.value.col)) {
+        return 'bg-[var(--daily-play-accent-soft)]'
     }
 
-    if (pathSet.value.has(key)) {
-        return `${base} bg-[var(--daily-play-accent-soft)] text-[var(--daily-play-accent-active)]`
-    }
-
-    return `${base} bg-[var(--daily-play-surface)] text-[var(--daily-play-text-muted)]`
+    return ''
 }
 
 const wallStyle = (wall) => {
-    const step = metrics.cell + metrics.gap
+    const stepX = metrics.cell + metrics.gap
 
     if (wall.direction === 'right') {
         return {
-            left: `${(wall.col + 1) * step - metrics.gap / 2}px`,
-            top: `${wall.row * step + 1}px`,
+            left: `${(wall.col + 1) * stepX - metrics.gap / 2}px`,
+            top: `${wall.row * stepX + 1}px`,
             height: `${metrics.cell - 2}px`,
             width: '4px',
             transform: 'translateX(-50%)',
@@ -275,8 +346,8 @@ const wallStyle = (wall) => {
     }
 
     return {
-        top: `${(wall.row + 1) * step - metrics.gap / 2}px`,
-        left: `${wall.col * step + 1}px`,
+        top: `${(wall.row + 1) * stepX - metrics.gap / 2}px`,
+        left: `${wall.col * stepX + 1}px`,
         width: `${metrics.cell - 2}px`,
         height: '4px',
         transform: 'translateY(-50%)',
@@ -289,6 +360,7 @@ const wallStyle = (wall) => {
         <div class="w-full max-w-[26rem]">
             <div
                 ref="boardEl"
+                role="grid"
                 class="relative grid touch-none select-none overflow-hidden rounded-lg border border-[var(--daily-play-border)] bg-[var(--daily-play-border)]"
                 :style="gridStyle"
                 @pointerdown="onPointerDown"
@@ -299,7 +371,8 @@ const wallStyle = (wall) => {
                 <div
                     v-for="cell in cells"
                     :key="cellKey(cell.row, cell.col)"
-                    :class="cellClass(cell)"
+                    role="gridcell"
+                    :class="[cellClass(cell), cellEmphasis(cell)]"
                     :aria-label="
                         cell.clue !== null
                             ? `Clue ${cell.clue}`
@@ -309,25 +382,47 @@ const wallStyle = (wall) => {
                     {{ cell.clue ?? '' }}
                 </div>
 
+                <svg
+                    class="pointer-events-none absolute inset-0 z-10 h-full w-full"
+                    aria-hidden="true"
+                    :viewBox="svgViewBox"
+                >
+                    <polyline
+                        v-if="path.length > 1"
+                        :points="linePoints"
+                        fill="none"
+                        style="stroke: var(--daily-play-accent); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round;"
+                        vector-effect="non-scaling-stroke"
+                    />
+
+                    <circle
+                        v-for="(cell, index) in path"
+                        :key="`node-${index}`"
+                        :cx="pointFor(cell.row, cell.col).x"
+                        :cy="pointFor(cell.row, cell.col).y"
+                        :r="nodeRadius"
+                        fill="var(--daily-play-accent)"
+                    />
+
+                    <circle
+                        v-if="currentCell"
+                        :cx="pointFor(currentCell.row, currentCell.col).x"
+                        :cy="pointFor(currentCell.row, currentCell.col).y"
+                        :r="headRadius"
+                        fill="var(--daily-play-surface)"
+                        stroke="var(--daily-play-accent-active)"
+                        stroke-width="3"
+                        vector-effect="non-scaling-stroke"
+                    />
+                </svg>
+
                 <div
                     v-for="(wall, index) in walls"
                     :key="`wall-${index}`"
-                    class="absolute z-10 rounded-full bg-[var(--daily-play-text-muted)]"
+                    class="absolute z-20 rounded-full bg-[var(--daily-play-text-muted)]"
                     :style="wallStyle(wall)"
                 />
             </div>
-        </div>
-
-        <div class="flex items-center gap-3">
-            <button
-                type="button"
-                :disabled="disabled || complete || pathKeys.length <= 1"
-                class="inline-flex items-center gap-1.5 rounded-lg border border-[var(--daily-play-border)] px-3 py-1.5 text-sm font-medium text-[var(--daily-play-text-muted)] transition hover:text-[var(--daily-play-accent)] disabled:opacity-50"
-                @click="resetPath"
-            >
-                <FontAwesomeIcon icon="rotate-left" class="text-xs" />
-                Reset
-            </button>
         </div>
 
         <p
@@ -335,7 +430,8 @@ const wallStyle = (wall) => {
             class="text-center text-sm text-[var(--daily-play-text-muted)]"
         >
             Start at <span class="font-semibold text-[var(--daily-play-accent-active)]">1</span>
-            and drag through every cell without lifting, without revisiting a cell, and without crossing a wall.
+            and press to trace the route in order.
+            Drag back over your line to backtrack.
         </p>
 
         <p

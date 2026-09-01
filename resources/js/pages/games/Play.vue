@@ -4,7 +4,7 @@ import Layout from '@/pages/layouts/PublicLayout.vue'
 import GameBoard from '@/components/games/GameBoard.vue'
 import MediaRenderer from '@/components/common/media/MediaRenderer.vue'
 import { formatDate, formatTime } from '@/composables/useDateTime'
-import { formatSolveDuration, useSolveTimer } from '@/composables/useSolveTimer'
+import { formatSolveDuration, useGamePlayTimer } from '@/composables/useGamePlayTimer'
 
 import { computed, ref } from 'vue'
 
@@ -35,7 +35,7 @@ const playStartedLabel = computed(() =>
     `${formatDate(playedAt)} at ${formatTime(playedAt, 'h:i a')}`,
 )
 
-const { elapsedSeconds, stop: stopTimer } = useSolveTimer()
+const { elapsedSeconds, stop: stopTimer } = useGamePlayTimer()
 
 const solved = ref(false)
 const finalSolveTime = ref(null)
