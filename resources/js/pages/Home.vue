@@ -76,7 +76,7 @@ const gameList = computed(() => games?.data ?? [])
 
                     <div class="mt-3 flex items-center gap-2">
                         <a
-                            :href="route('game.details', { slug: game.slug })"
+                            :href="route('games.details', { slug: game.slug })"
                             class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--daily-play-border)] px-3 py-2 text-sm font-medium text-[var(--daily-play-text)] transition hover:bg-gray-50"
                         >
                             <FontAwesomeIcon icon="info" class="text-xs" />
@@ -84,7 +84,7 @@ const gameList = computed(() => games?.data ?? [])
                         </a>
 
                         <a
-                            :href="route('game.play', { slug: game.slug })"
+                            :href="route('games.play', { slug: game.slug })"
                             class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[var(--daily-play-accent)] px-3 py-2 text-sm font-medium text-white transition hover:bg-[var(--daily-play-accent-hover)]"
                         >
                             <FontAwesomeIcon icon="gamepad" class="text-xs" />

@@ -176,8 +176,13 @@ Route::get('/', function () {
 
 Route::middleware(['response.cache:30,public,15,etag'])->group(function () {
     Route::get('home', [PageController::class, 'home'])->name('home');
-    Route::prefix('games')->name('game.')->group(function () {
+    Route::prefix('games')->name('games.')->group(function () {
         Route::get('play/{slug}', [PageController::class, 'gamePlay'])->name('play');
         Route::get('details/{slug}', [PageController::class, 'gameDetails'])->name('details');
+    });
+
+    Route::prefix('players')->name('players.')->group(function () {
+        Route::get('get/{sessionId}', [PageController::class, 'playerGet'])->name('get');
+        Route::get('save', [PageController::class, 'playerSave'])->name('save');
     });
 });

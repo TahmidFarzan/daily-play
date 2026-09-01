@@ -72,7 +72,7 @@ const { game } = defineProps({
 
                 <a
                     v-if="game?.slug"
-                    :href="route('game.play', { slug: game.slug })"
+                    :href="route('games.play', { slug: game.slug })"
                     class="mt-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--daily-play-accent)] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[var(--daily-play-accent-hover)]"
                 >
                     <FontAwesomeIcon icon="gamepad" />

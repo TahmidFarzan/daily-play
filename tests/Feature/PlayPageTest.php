@@ -39,7 +39,7 @@ class PlayPageTest extends TestCase
 
         $game = $this->createZipGame();
 
-        $response = $this->get(route('game.play', ['slug' => $game->slug]));
+        $response = $this->get(route('games.play', ['slug' => $game->slug]));
 
         $response->assertSuccessful();
 
@@ -88,10 +88,10 @@ class PlayPageTest extends TestCase
 
         $game = $this->createZipGame();
 
-        $first = $this->get(route('game.play', ['slug' => $game->slug]));
+        $first = $this->get(route('games.play', ['slug' => $game->slug]));
         $first->assertSuccessful();
 
-        $second = $this->get(route('game.play', ['slug' => $game->slug]));
+        $second = $this->get(route('games.play', ['slug' => $game->slug]));
         $second->assertSuccessful();
 
         $firstDailyGame = $first->viewData('page')['props']['dailyGame'];
@@ -109,7 +109,7 @@ class PlayPageTest extends TestCase
 
         $game = $this->createZipGame();
 
-        $response = $this->get(route('game.play', ['slug' => $game->slug]));
+        $response = $this->get(route('games.play', ['slug' => $game->slug]));
 
         $response->assertSuccessful();
 
@@ -126,7 +126,7 @@ class PlayPageTest extends TestCase
     {
         $this->travelTo(Carbon::parse('2026-09-01 09:00:00'));
 
-        $response = $this->get(route('game.play', ['slug' => 'not-a-game']));
+        $response = $this->get(route('games.play', ['slug' => 'not-a-game']));
 
         $response->assertNotFound();
         $this->assertSame(0, DailyGame::count());
