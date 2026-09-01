@@ -175,6 +175,9 @@ Route::get('/', function () {
 });
 
 Route::middleware(['response.cache:30,public,15,etag'])->group(function () {
-
     Route::get('home', [PageController::class, 'home'])->name('home');
+    Route::prefix('games')->name('game.')->group(function () {
+        Route::get('play/{slug}', [PageController::class, 'gamePlay'])->name('play');
+        Route::get('details/{slug}', [PageController::class, 'gameDetails'])->name('details');
+    });
 });
