@@ -3,13 +3,11 @@
 namespace App\Services;
 
 use App\Helpers\CacheHelper;
-use Exception;
+use App\Models\DailyGame;
 use App\Models\Game;
-use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use App\Services\Cache\DailyGameCacheService;
 use App\Services\Cache\GameCacheService;
+use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class PageService
@@ -18,22 +16,34 @@ class PageService
 
     protected GameCacheService $gameCacheService;
 
+    protected DailyGameCacheService $dailyGameCacheService;
 
-    public function __construct( GameCacheService $gameCacheService) {
-        $this->gameCacheService    = $gameCacheService;
+    public function __construct(GameCacheService $gameCacheService, DailyGameCacheService $dailyGameCacheService)
+    {
+        $this->gameCacheService = $gameCacheService;
+        $this->dailyGameCacheService = $dailyGameCacheService;
     }
 
     public function gameBySlug(string $pageKey, string $slug): Game
     {
         $fullKey = $pageKey;
-        $fullKey .= ':' . CacheHelper::KEY_GAME;
+        $fullKey .= ':'.CacheHelper::KEY_GAME;
+
         return $this->gameCacheService->getRecordBySlug($fullKey, $slug, $this->cachedTTL);
+    }
+
+    public function dailyGameByGameSlug(string $pageKey, string $slug): DailyGame
+    {
+        $game = $this->gameBySlug($pageKey, $slug);
+
+        return $this->dailyGameCacheService->getRecordByGameAndDate($pageKey, $game, now(), $this->cachedTTL);
     }
 
     public function games(Request $request, string $pageKey): LengthAwarePaginator
     {
         $fullKey = $pageKey;
-        $fullKey .= ':' . CacheHelper::KEY_GAMES;
+        $fullKey .= ':'.CacheHelper::KEY_GAMES;
+
         return $this->gameCacheService->getRecords($fullKey, $request, $this->cachedTTL);
     }
 }

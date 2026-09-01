@@ -8,8 +8,6 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
-use App\Http\Requests\QuizSubmitRequest;
-
 class PageController extends Controller
 {
     protected PageService $pageService;
@@ -22,17 +20,20 @@ class PageController extends Controller
     public function home(Request $request): InertiaResponse
     {
         $games = $this->pageService->games($request, CacheHelper::KEY_HOME_PAGE);
+
         return Inertia::render('Home', [
-            'games'         => $games,
+            'games' => $games,
         ]);
     }
 
     public function gamePlay(string $slug): InertiaResponse
     {
-        $game = $this->pageService->gameBySlug(CacheHelper::KEY_PLAY_GAME_PAGE, $slug);
+        $dailyGame = $this->pageService->dailyGameByGameSlug(CacheHelper::KEY_PLAY_GAME_PAGE, $slug);
 
-        return Inertia::render('games/Play',[
-            'game'         => $game,
+
+        return Inertia::render('games/Play', [
+            'dailyGame' => $dailyGame,
+            'serverNow' => now()->toIso8601String(),
         ]);
     }
 
@@ -40,8 +41,8 @@ class PageController extends Controller
     {
         $game = $this->pageService->gameBySlug(CacheHelper::KEY_GAME_DETAILS_PAGE, $slug);
 
-        return Inertia::render('games/Details',[
-            'game'         => $game,
+        return Inertia::render('games/Details', [
+            'game' => $game,
         ]);
     }
 }
