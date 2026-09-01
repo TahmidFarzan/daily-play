@@ -10,9 +10,9 @@ import { computed, ref } from 'vue'
 
 import { library as FontAwesomeLibrary } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faArrowLeft, faCircleCheck, faGamepad, faStopwatch } from '@fortawesome/free-solid-svg-icons'
+import { faArrowLeft, faCircleCheck, faGamepad, faRotateLeft, faStopwatch } from '@fortawesome/free-solid-svg-icons'
 
-FontAwesomeLibrary.add(faArrowLeft, faCircleCheck, faGamepad, faStopwatch)
+FontAwesomeLibrary.add(faArrowLeft, faCircleCheck, faGamepad, faRotateLeft, faStopwatch)
 
 defineOptions({
     layout: Layout,
@@ -39,14 +39,44 @@ const { elapsedSeconds, stop: stopTimer } = useGamePlayTimer()
 
 const solved = ref(false)
 const finalSolveTime = ref(null)
+const backtrackCount = ref(0)
 
 const formattedElapsed = computed(() => formatSolveDuration(elapsedSeconds.value))
 
-const handleSolved = () => {
+const backtrackLevel = computed(() => {
+    if (backtrackCount.value <= 4) {
+        return 'border-[var(--daily-play-border)] text-[var(--daily-play-text-muted)]'
+    }
+
+    if (backtrackCount.value <= 6) {
+        return 'border-amber-200 bg-amber-50 text-amber-700'
+    }
+
+    if (backtrackCount.value <= 8) {
+        return 'border-orange-200 bg-orange-50 text-orange-700'
+    }
+
+    if (backtrackCount.value <= 10) {
+        return 'border-rose-200 bg-rose-50 text-rose-700'
+    }
+
+    return 'border-pink-200 bg-pink-50 text-pink-700'
+})
+
+const solvedBacktrackLabel = computed(() =>
+    backtrackCount.value > 0 ? `${backtrackCount.value} Backtracks` : 'No backtracks',
+)
+
+const handleBacktrackCount = (count) => {
+    backtrackCount.value = count
+}
+
+const handleSolved = (payload) => {
     if (solved.value) return
 
     solved.value = true
     finalSolveTime.value = formatSolveDuration(elapsedSeconds.value)
+    backtrackCount.value = payload?.backtrackCount ?? backtrackCount.value
     stopTimer()
 }
 </script>
@@ -116,15 +146,29 @@ const handleSolved = () => {
                     Play at: {{ playStartedLabel }}
                 </p>
 
-                <div
-                    class="inline-flex items-center gap-2 rounded-xl border border-[var(--daily-play-border)] bg-gray-50 px-4 py-2"
-                >
-                    <FontAwesomeIcon icon="stopwatch" class="text-[var(--daily-play-text-muted)]" />
-                    <span
-                        class="font-mono text-lg font-semibold tabular-nums text-[var(--daily-play-text)]"
+                <div class="flex flex-wrap items-center gap-2">
+                    <div
+                        class="inline-flex items-center gap-2 rounded-xl border border-[var(--daily-play-border)] bg-gray-50 px-4 py-2"
                     >
-                        {{ formattedElapsed }}
-                    </span>
+                        <FontAwesomeIcon icon="stopwatch" class="text-[var(--daily-play-text-muted)]" />
+                        <span
+                            class="font-mono text-lg font-semibold tabular-nums text-[var(--daily-play-text)]"
+                        >
+                            {{ formattedElapsed }}
+                        </span>
+                    </div>
+
+                    <div
+                        v-if="backtrackCount > 0"
+                        class="inline-flex items-center gap-2 rounded-xl border px-4 py-2"
+                        :class="backtrackLevel"
+                    >
+                        <FontAwesomeIcon icon="rotate-left" class="text-sm" />
+                        <span class="font-mono text-base font-semibold tabular-nums">
+                            {{ backtrackCount }}
+                        </span>
+                        <span class="text-xs font-medium">Backtracks</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -142,26 +186,53 @@ const handleSolved = () => {
                 :board="board"
                 :disabled="solved"
                 @completed="handleSolved"
+                @backtrack-count="handleBacktrackCount"
             />
         </div>
 
         <div
             v-if="solved"
-            class="inline-flex items-center gap-2 self-center rounded-2xl border border-[var(--daily-play-accent)] bg-[var(--daily-play-accent-soft)] px-5 py-3 shadow-sm"
+            aria-live="polite"
+            class="success-card mx-auto w-full max-w-md rounded-2xl border border-[var(--daily-play-accent)] bg-[var(--daily-play-surface)] p-6 text-center shadow-[var(--daily-play-shadow-lg)]"
         >
-            <FontAwesomeIcon
-                icon="circle-check"
-                class="text-xl text-[var(--daily-play-accent-active)]"
-            />
-            <p class="font-semibold text-[var(--daily-play-text)]">
-                Solved!
-                <span class="ml-1 font-normal text-[var(--daily-play-text-muted)]">
-                    Time needed
-                    <span class="font-semibold text-[var(--daily-play-accent-active)]">
+            <div
+                class="check-badge mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--daily-play-accent-soft)]"
+            >
+                <FontAwesomeIcon
+                    icon="circle-check"
+                    class="text-3xl text-[var(--daily-play-accent-active)]"
+                />
+            </div>
+
+            <h2 class="mt-4 text-2xl font-bold tracking-tight text-[var(--daily-play-text)]">
+                Puzzle Complete
+            </h2>
+
+            <div class="mt-6 grid gap-3 sm:grid-cols-2">
+                <div
+                    class="stat-item rounded-xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-4 py-3"
+                >
+                    <p class="text-xs font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
+                        Time
+                    </p>
+                    <p
+                        class="mt-1 font-mono text-xl font-semibold tabular-nums text-[var(--daily-play-text)]"
+                    >
                         {{ finalSolveTime }}
-                    </span>
-                </span>
-            </p>
+                    </p>
+                </div>
+
+                <div
+                    class="stat-item rounded-xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-4 py-3"
+                >
+                    <p class="text-xs font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
+                        Backtracks
+                    </p>
+                    <p class="mt-1 text-xl font-semibold text-[var(--daily-play-text)]">
+                        {{ solvedBacktrackLabel }}
+                    </p>
+                </div>
+            </div>
         </div>
 
         <div
@@ -177,3 +248,61 @@ const handleSolved = () => {
         </div>
     </section>
 </template>
+
+<style scoped>
+.success-card {
+    animation: success-card-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.check-badge {
+    animation: check-pop 0.5s cubic-bezier(0.2, 1.4, 0.3, 1) 0.15s both;
+}
+
+.stat-item:nth-child(1) {
+    animation: stat-in 0.4s ease-out 0.4s both;
+}
+
+.stat-item:nth-child(2) {
+    animation: stat-in 0.4s ease-out 0.55s both;
+}
+
+@keyframes success-card-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes check-pop {
+    0% {
+        opacity: 0;
+        transform: scale(0.4);
+    }
+
+    60% {
+        transform: scale(1.12);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes stat-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+</style>

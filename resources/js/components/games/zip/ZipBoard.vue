@@ -1,21 +1,42 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 
 import { library as FontAwesomeLibrary } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faCircleCheck } from '@fortawesome/free-solid-svg-icons'
 
+import { useZipPlay } from '@/composables/useZipPlay'
+
 FontAwesomeLibrary.add(faCircleCheck)
 
-const emit = defineEmits(['completed'])
+const emit = defineEmits(['completed', 'backtrack-count'])
 
 const { board, disabled } = defineProps({
     board: { type: Object, default: null },
     disabled: { type: Boolean, default: false },
 })
 
-const rows = computed(() => board?.rows || 0)
-const cols = computed(() => board?.cols || 0)
+const boardSource = computed(() => board)
+
+const {
+    rows,
+    cols,
+    cellKey,
+    clueMap,
+    walls,
+    startCell,
+    goalKey,
+    path,
+    currentCell,
+    complete,
+    backtrackCount,
+    canStartDragAt,
+    startDrag,
+    traceToward,
+} = useZipPlay(boardSource)
+
+const isDragging = ref(false)
+let activePointerId = null
 
 const gridGap = 4
 
@@ -26,35 +47,15 @@ const gridStyle = computed(() => ({
 
 const metrics = reactive({ cell: 0, gap: gridGap })
 
-const cellKey = (row, col) => `${row}:${col}`
-
-const clueMap = computed(() => {
-    const map = {}
-
-    for (const clue of board?.clues || []) {
-        map[cellKey(clue.row, clue.col)] = clue.number
-    }
-
-    return map
-})
-
-const walls = computed(() => board?.walls || [])
-
-const wallSet = computed(() => new Set(walls.value.map(
-    (wall) => `${wall.row}:${wall.col}:${wall.direction}`,
-)))
-
 const cells = computed(() => {
     const list = []
 
     for (let row = 0; row < rows.value; row++) {
         for (let col = 0; col < cols.value; col++) {
-            const key = cellKey(row, col)
-
             list.push({
                 row,
                 col,
-                clue: clueMap.value[key] ?? null,
+                clue: clueMap.value[cellKey(row, col)] ?? null,
             })
         }
     }
@@ -62,48 +63,7 @@ const cells = computed(() => {
     return list
 })
 
-const totalCells = computed(() => rows.value * cols.value)
-
-const startCell = computed(() => {
-    const startClue = (board?.clues || []).find((clue) => clue.number === 1)
-
-    return startClue ? { row: startClue.row, col: startClue.col } : null
-})
-
-const goalKey = computed(() => {
-    let highest = null
-
-    for (const clue of board?.clues || []) {
-        if (!highest || clue.number > highest.number) highest = clue
-    }
-
-    return highest ? cellKey(highest.row, highest.col) : null
-})
-
-const path = ref([])
-const currentCell = ref(null)
-const isDragging = ref(false)
-const complete = ref(false)
-const backtrackCount = ref(0)
-
-let activePointerId = null
-let backtrackingInGesture = false
-
 const boardEl = ref(null)
-
-const pathIndex = (row, col) => path.value.findIndex((cell) => cell.row === row && cell.col === col)
-
-const nextClue = computed(() => {
-    let highest = 0
-
-    for (const cell of path.value) {
-        const clue = clueMap.value[cellKey(cell.row, cell.col)]
-
-        if (clue) highest = Math.max(highest, clue)
-    }
-
-    return highest + 1
-})
 
 const cellFromPoint = (clientX, clientY) => {
     const el = boardEl.value
@@ -119,150 +79,6 @@ const cellFromPoint = (clientX, clientY) => {
     if (row < 0 || row >= rows.value || col < 0 || col >= cols.value) return null
 
     return { row, col }
-}
-
-const blocksMove = (fromRow, fromCol, toRow, toCol) => {
-    const deltaRow = toRow - fromRow
-    const deltaCol = toCol - fromCol
-
-    let wallKey = null
-
-    if (deltaRow === 0 && deltaCol === 1) {
-        wallKey = `${fromRow}:${fromCol}:right`
-    } else if (deltaRow === 0 && deltaCol === -1) {
-        wallKey = `${toRow}:${toCol}:right`
-    } else if (deltaRow === 1 && deltaCol === 0) {
-        wallKey = `${fromRow}:${fromCol}:down`
-    } else if (deltaRow === -1 && deltaCol === 0) {
-        wallKey = `${toRow}:${toCol}:down`
-    }
-
-    return wallKey !== null && wallSet.value.has(wallKey)
-}
-
-const isAdjacent = (fromRow, fromCol, toRow, toCol) =>
-    Math.abs(toRow - fromRow) + Math.abs(toCol - fromCol) === 1
-
-const finish = () => {
-    complete.value = true
-    isDragging.value = false
-    activePointerId = null
-
-    emit('completed', {
-        path: path.value.map((cell) => ({ ...cell })),
-        backtrackCount: backtrackCount.value,
-    })
-}
-
-const moveTo = (row, col) => {
-    if (complete.value || !currentCell.value) return false
-
-    if (currentCell.value.row === row && currentCell.value.col === col) return false
-
-    const index = pathIndex(row, col)
-
-    if (index !== -1) {
-        path.value.splice(index + 1)
-        currentCell.value = { row, col }
-
-        if (!backtrackingInGesture) {
-            backtrackCount.value += 1
-            backtrackingInGesture = true
-        }
-
-        return true
-    }
-
-    if (!isAdjacent(currentCell.value.row, currentCell.value.col, row, col)) return false
-
-    if (blocksMove(currentCell.value.row, currentCell.value.col, row, col)) return false
-
-    const clue = clueMap.value[cellKey(row, col)]
-
-    if (clue && clue !== nextClue.value) return false
-
-    path.value.push({ row, col })
-    currentCell.value = { row, col }
-    backtrackingInGesture = false
-
-    if (path.value.length === totalCells.value) {
-        finish()
-    }
-
-    return true
-}
-
-const stepToward = (target) => {
-    const head = currentCell.value
-
-    if (!head || (head.row === target.row && head.col === target.col)) return null
-
-    const deltaRow = target.row - head.row
-    const deltaCol = target.col - head.col
-
-    const horizontal = deltaCol !== 0 ? { row: head.row, col: head.col + Math.sign(deltaCol) } : null
-    const vertical = deltaRow !== 0 ? { row: head.row + Math.sign(deltaRow), col: head.col } : null
-    const candidates = [horizontal, vertical].filter(Boolean)
-
-    const inPath = candidates.find((cell) => pathIndex(cell.row, cell.col) !== -1)
-
-    if (inPath) return inPath
-
-    if (Math.abs(deltaRow) > Math.abs(deltaCol)) return vertical ?? horizontal
-
-    return horizontal ?? vertical
-}
-
-const traceToward = (target) => {
-    let guard = totalCells.value
-
-    while (guard > 0) {
-        if (complete.value) return
-
-        const step = stepToward(target)
-
-        if (!step) return
-
-        if (!moveTo(step.row, step.col)) return
-
-        guard -= 1
-    }
-}
-
-const onPointerDown = (event) => {
-    if (disabled || complete.value || isDragging.value) return
-
-    const cell = cellFromPoint(event.clientX, event.clientY)
-
-    if (!cell || !startCell.value) return
-
-    if (cell.row !== startCell.value.row || cell.col !== startCell.value.col) return
-
-    isDragging.value = true
-    activePointerId = event.pointerId
-    backtrackingInGesture = false
-    path.value = [{ row: startCell.value.row, col: startCell.value.col }]
-    currentCell.value = { row: startCell.value.row, col: startCell.value.col }
-
-    boardEl.value?.setPointerCapture?.(event.pointerId)
-    event.preventDefault()
-}
-
-const onPointerMove = (event) => {
-    if (!isDragging.value || event.pointerId !== activePointerId) return
-
-    const target = cellFromPoint(event.clientX, event.clientY)
-
-    if (target) {
-        traceToward(target)
-    }
-}
-
-const onPointerEnd = (event) => {
-    if (!isDragging.value || event.pointerId !== activePointerId) return
-
-    isDragging.value = false
-    activePointerId = null
 }
 
 const computeMetrics = () => {
@@ -283,6 +99,59 @@ onMounted(() => {
 onBeforeUnmount(() => {
     window.removeEventListener('resize', onResize)
 })
+
+watch(backtrackCount, (count) => {
+    emit('backtrack-count', count)
+})
+
+watch(complete, (done) => {
+    if (done) {
+        emit('completed', {
+            path: path.value.map((cell) => ({ ...cell })),
+            backtrackCount: backtrackCount.value,
+        })
+    }
+})
+
+const finishDrag = (event) => {
+    if (!isDragging.value || event.pointerId !== activePointerId) return
+
+    isDragging.value = false
+    activePointerId = null
+
+    if (boardEl.value?.hasPointerCapture?.(event.pointerId)) {
+        boardEl.value.releasePointerCapture(event.pointerId)
+    }
+}
+
+const onPointerDown = (event) => {
+    if (disabled || isDragging.value) return
+
+    const cell = cellFromPoint(event.clientX, event.clientY)
+
+    if (!cell) return
+
+    if (!startDrag(cell)) return
+
+    isDragging.value = true
+    activePointerId = event.pointerId
+
+    if (boardEl.value?.setPointerCapture) {
+        boardEl.value.setPointerCapture(event.pointerId)
+    }
+
+    event.preventDefault()
+}
+
+const onPointerMove = (event) => {
+    if (!isDragging.value || event.pointerId !== activePointerId) return
+
+    const target = cellFromPoint(event.clientX, event.clientY)
+
+    if (target) {
+        traceToward(target)
+    }
+}
 
 const step = computed(() => metrics.cell + metrics.gap)
 
@@ -365,8 +234,11 @@ const wallStyle = (wall) => {
                 :style="gridStyle"
                 @pointerdown="onPointerDown"
                 @pointermove="onPointerMove"
-                @pointerup="onPointerEnd"
-                @pointercancel="onPointerEnd"
+                @pointerup="finishDrag"
+                @pointercancel="finishDrag"
+                @pointerleave="finishDrag"
+                @lostpointercapture="finishDrag"
+                @contextmenu.prevent="() => {}"
             >
                 <div
                     v-for="cell in cells"
@@ -389,6 +261,7 @@ const wallStyle = (wall) => {
                 >
                     <polyline
                         v-if="path.length > 1"
+                        :class="{ 'path-complete': complete }"
                         :points="linePoints"
                         fill="none"
                         style="stroke: var(--daily-play-accent); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round;"
@@ -430,8 +303,8 @@ const wallStyle = (wall) => {
             class="text-center text-sm text-[var(--daily-play-text-muted)]"
         >
             Start at <span class="font-semibold text-[var(--daily-play-accent-active)]">1</span>
-            and press to trace the route in order.
-            Drag back over your line to backtrack.
+            and press to trace the route in order. Drag back over your line to backtrack.
+            You can release and continue from the endpoint at any time.
         </p>
 
         <p
@@ -443,3 +316,24 @@ const wallStyle = (wall) => {
         </p>
     </div>
 </template>
+
+<style scoped>
+.path-complete {
+    animation: path-complete-pulse 0.7s ease-out;
+    filter: drop-shadow(0 0 6px var(--daily-play-accent));
+}
+
+@keyframes path-complete-pulse {
+    0% {
+        filter: drop-shadow(0 0 0 var(--daily-play-accent));
+    }
+
+    50% {
+        filter: drop-shadow(0 0 10px var(--daily-play-accent));
+    }
+
+    100% {
+        filter: drop-shadow(0 0 6px var(--daily-play-accent));
+    }
+}
+</style>
