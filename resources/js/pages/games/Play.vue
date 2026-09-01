@@ -3,84 +3,52 @@ import { Head } from '@inertiajs/vue3'
 import Layout from '@/pages/layouts/PublicLayout.vue'
 import GameBoard from '@/components/games/GameBoard.vue'
 import MediaRenderer from '@/components/common/media/MediaRenderer.vue'
-import { formatDate } from '@/composables/useDateTime'
+import { formatDate, formatTime } from '@/composables/useDateTime'
+import { formatSolveDuration, useSolveTimer } from '@/composables/useSolveTimer'
 
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import { library as FontAwesomeLibrary } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faArrowLeft, faClock, faGamepad } from '@fortawesome/free-solid-svg-icons'
+import { faArrowLeft, faCircleCheck, faGamepad, faStopwatch } from '@fortawesome/free-solid-svg-icons'
 
-FontAwesomeLibrary.add(faArrowLeft, faClock, faGamepad)
+FontAwesomeLibrary.add(faArrowLeft, faCircleCheck, faGamepad, faStopwatch)
 
 defineOptions({
     layout: Layout,
 })
 
-const { dailyGame, serverNow } = defineProps({
-    dailyGame: { type: Object},
-    serverNow: { type: String, default: null },
+const { dailyGame } = defineProps({
+    dailyGame: { type: Object, default: null },
 })
 
 const game = computed(() => dailyGame?.game ?? {})
 const board = computed(() => dailyGame?.board ?? {})
-const difficulty = computed(() => dailyGame?.gameDifficulty ?? null)
-
-const endMs = computed(() =>
-    dailyGame?.ends_at ? new Date(dailyGame.ends_at).getTime() : 0,
-)
-
-const clockOffsetMs = computed(() => {
-    const serverMs = serverNow ? new Date(serverNow).getTime() : 0
-
-    return serverMs ? serverMs - Date.now() : 0
-})
-
-const remainingSeconds = ref(0)
-let tickerInterval = null
-
-const computeRemainingSeconds = () => {
-    if (!endMs.value) return 0
-
-    return Math.max(0, Math.floor((endMs.value - clockOffsetMs.value - Date.now()) / 1000))
-}
-
-const updateRemaining = () => {
-    remainingSeconds.value = computeRemainingSeconds()
-}
-
-const isExpired = computed(() => remainingSeconds.value <= 0)
-
-const formattedTime = computed(() => {
-    const total = remainingSeconds.value
-    const hours = Math.floor(total / 3600)
-    const minutes = Math.floor((total % 3600) / 60)
-    const seconds = total % 60
-
-    const pad = (value) => String(value).padStart(2, '0')
-
-    if (hours > 0) {
-        return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
-    }
-
-    return `${pad(minutes)}:${pad(seconds)}`
-})
+const difficulty = computed(() => dailyGame?.game_difficulty ?? null)
 
 const dailyDateLabel = computed(() =>
     dailyGame?.game_date ? formatDate(dailyGame.game_date) : '',
 )
 
-onMounted(() => {
-    updateRemaining()
+const playedAt = new Date()
+const playStartedLabel = computed(() =>
+    `${formatDate(playedAt)} at ${formatTime(playedAt, 'h:i a')}`,
+)
 
-    tickerInterval = window.setInterval(updateRemaining, 1000)
-})
+const { elapsedSeconds, stop: stopTimer } = useSolveTimer()
 
-onBeforeUnmount(() => {
-    if (tickerInterval !== null) {
-        window.clearInterval(tickerInterval)
-    }
-})
+const solved = ref(false)
+const finalSolveTime = ref(null)
+
+const formattedElapsed = computed(() => formatSolveDuration(elapsedSeconds.value))
+
+const handleSolved = () => {
+    if (solved.value) return
+
+    solved.value = true
+    finalSolveTime.value = formatSolveDuration(elapsedSeconds.value)
+    stopTimer()
+}
 </script>
 
 <template>
@@ -125,7 +93,7 @@ onBeforeUnmount(() => {
                             v-if="difficulty?.name"
                             class="rounded-full border border-[var(--daily-play-accent)] bg-[var(--daily-play-accent-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--daily-play-accent-active)]"
                         >
-                            {{ difficulty?.name }}
+                            {{ difficulty.name }}
                         </span>
 
                         <span
@@ -143,15 +111,21 @@ onBeforeUnmount(() => {
                 </div>
             </div>
 
-            <div
-                class="inline-flex items-center gap-2 self-start rounded-xl border border-[var(--daily-play-border)] bg-gray-50 px-4 py-2 sm:self-center"
-            >
-                <FontAwesomeIcon icon="clock" class="text-[var(--daily-play-text-muted)]" />
-                <span
-                    class="font-mono text-lg font-semibold tabular-nums text-[var(--daily-play-text)]"
+            <div class="flex flex-col items-start gap-1.5 sm:items-end">
+                <p class="text-xs font-medium text-[var(--daily-play-text-muted)]">
+                    Play at: {{ playStartedLabel }}
+                </p>
+
+                <div
+                    class="inline-flex items-center gap-2 rounded-xl border border-[var(--daily-play-border)] bg-gray-50 px-4 py-2"
                 >
-                    {{ formattedTime }}
-                </span>
+                    <FontAwesomeIcon icon="stopwatch" class="text-[var(--daily-play-text-muted)]" />
+                    <span
+                        class="font-mono text-lg font-semibold tabular-nums text-[var(--daily-play-text)]"
+                    >
+                        {{ formattedElapsed }}
+                    </span>
+                </div>
             </div>
         </div>
 
@@ -166,22 +140,28 @@ onBeforeUnmount(() => {
             <GameBoard
                 :game="game"
                 :board="board"
-                :disabled="isExpired"
+                :disabled="solved"
+                @completed="handleSolved"
             />
+        </div>
 
-            <div
-                v-if="isExpired"
-                class="absolute inset-0 z-10 flex items-center justify-center"
-            >
-                <div
-                    class="rounded-2xl border border-[var(--daily-play-border)] bg-[var(--daily-play-surface)] px-6 py-4 text-center shadow-lg"
-                >
-                    <p class="font-semibold text-[var(--daily-play-text)]">Time's Up!</p>
-                    <p class="mt-1 text-sm text-[var(--daily-play-text-muted)]">
-                        This daily puzzle has ended. Come back tomorrow for a new one.
-                    </p>
-                </div>
-            </div>
+        <div
+            v-if="solved"
+            class="inline-flex items-center gap-2 self-center rounded-2xl border border-[var(--daily-play-accent)] bg-[var(--daily-play-accent-soft)] px-5 py-3 shadow-sm"
+        >
+            <FontAwesomeIcon
+                icon="circle-check"
+                class="text-xl text-[var(--daily-play-accent-active)]"
+            />
+            <p class="font-semibold text-[var(--daily-play-text)]">
+                Solved!
+                <span class="ml-1 font-normal text-[var(--daily-play-text-muted)]">
+                    Time needed
+                    <span class="font-semibold text-[var(--daily-play-accent-active)]">
+                        {{ finalSolveTime }}
+                    </span>
+                </span>
+            </p>
         </div>
 
         <div

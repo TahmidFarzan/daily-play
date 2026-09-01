@@ -11,7 +11,6 @@ use App\Services\GamePlay\ZipBoardGenerator;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use RuntimeException;
 use Throwable;
 
 class DailyGameCacheService
@@ -101,7 +100,7 @@ class DailyGameCacheService
 
                 switch ($game->slug) {
                     case 'zip':
-                            $board = app(ZipBoardGenerator::class)->generate($game, $gameDate, $difficulty);
+                        $board = app(ZipBoardGenerator::class)->generate($game, $gameDate, $difficulty);
                         break;
 
                     default:

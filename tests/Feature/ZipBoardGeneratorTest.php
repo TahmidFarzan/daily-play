@@ -48,18 +48,20 @@ class ZipBoardGeneratorTest extends TestCase
         $hard = $this->generator()->generate($game, $gameDate, GameDifficulty::where('slug', 'hard')->firstOrFail());
 
         $expectedBySlug = [
-            'easy' => ['rows' => 5, 'cols' => 4, 'clues' => 6, 'cells' => 20],
-            'normal' => ['rows' => 6, 'cols' => 5, 'clues' => 7, 'cells' => 30],
-            'hard' => ['rows' => 7, 'cols' => 6, 'clues' => 8, 'cells' => 42],
+            'easy' => ['rows' => 5, 'cols' => 4, 'clues' => 6, 'cells' => 20, 'walls' => 12],
+            'normal' => ['rows' => 6, 'cols' => 5, 'clues' => 7, 'cells' => 30, 'walls' => 20],
+            'hard' => ['rows' => 7, 'cols' => 6, 'clues' => 8, 'cells' => 42, 'walls' => 30],
         ];
 
         foreach (['easy' => $easy, 'normal' => $normal, 'hard' => $hard] as $slug => $board) {
             $expected = $expectedBySlug[$slug];
 
+            $this->assertArrayHasKey('walls', $board);
             $this->assertSame($expected['rows'], $board['rows']);
             $this->assertSame($expected['cols'], $board['cols']);
             $this->assertCount($expected['clues'], $board['clues']);
             $this->assertCount($expected['cells'], $board['path']);
+            $this->assertCount($expected['walls'], $board['walls']);
         }
     }
 
@@ -119,6 +121,59 @@ class ZipBoardGeneratorTest extends TestCase
         $this->assertSame($pathKeys[count($pathKeys) - 1], "{$lastClue['row']}:{$lastClue['col']}");
     }
 
+    public function test_walls_cover_every_edge_not_used_by_the_solution_path(): void
+    {
+        $game = $this->createZipGame();
+        $difficulty = GameDifficulty::where('slug', 'normal')->firstOrFail();
+
+        $board = $this->generator()->generate($game, now(), $difficulty);
+
+        $rows = $board['rows'];
+        $cols = $board['cols'];
+        $path = $board['path'];
+        $walls = $board['walls'];
+
+        $traversed = [];
+        for ($index = 1; $index < count($path); $index++) {
+            $from = $path[$index - 1];
+            $to = $path[$index];
+
+            if ($to['row'] === $from['row'] && $to['col'] === $from['col'] + 1) {
+                $traversed["{$from['row']}:{$from['col']}:right"] = true;
+            } elseif ($to['row'] === $from['row'] && $to['col'] === $from['col'] - 1) {
+                $traversed["{$to['row']}:{$to['col']}:right"] = true;
+            } elseif ($to['row'] === $from['row'] + 1 && $to['col'] === $from['col']) {
+                $traversed["{$from['row']}:{$from['col']}:down"] = true;
+            } elseif ($to['row'] === $from['row'] - 1 && $to['col'] === $from['col']) {
+                $traversed["{$to['row']}:{$to['col']}:down"] = true;
+            }
+        }
+
+        $wallKeys = [];
+        foreach ($walls as $wall) {
+            $this->assertContains($wall['direction'], ['right', 'down']);
+            $this->assertGreaterThanOrEqual(0, $wall['row']);
+            $this->assertLessThan($rows, $wall['row']);
+            $this->assertGreaterThanOrEqual(0, $wall['col']);
+            $this->assertLessThan($cols, $wall['col']);
+
+            if ($wall['direction'] === 'right') {
+                $this->assertLessThan($cols - 1, $wall['col'], 'A right wall must sit between two cells.');
+            } else {
+                $this->assertLessThan($rows - 1, $wall['row'], 'A down wall must sit between two cells.');
+            }
+
+            $key = "{$wall['row']}:{$wall['col']}:{$wall['direction']}";
+            $this->assertArrayNotHasKey($key, $traversed, "A wall cannot sit on a path edge [{$key}].");
+            $wallKeys[] = $key;
+        }
+
+        $totalEdges = $rows * ($cols - 1) + ($rows - 1) * $cols;
+
+        $this->assertCount($totalEdges - count($path) + 1, $walls);
+        $this->assertCount($totalEdges, array_unique(array_merge(array_keys($traversed), $wallKeys)), 'Walls and traversed edges must cover every grid edge.');
+    }
+
     public function test_generate_without_a_difficulty_falls_back_to_normal(): void
     {
         $game = $this->createZipGame();
@@ -129,5 +184,6 @@ class ZipBoardGeneratorTest extends TestCase
         $this->assertSame(5, $board['cols']);
         $this->assertCount(7, $board['clues']);
         $this->assertCount(30, $board['path']);
+        $this->assertCount(20, $board['walls']);
     }
 }

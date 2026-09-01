@@ -9,6 +9,8 @@ import { faGamepad } from '@fortawesome/free-solid-svg-icons'
 
 FontAwesomeLibrary.add(faGamepad)
 
+const emit = defineEmits(['completed'])
+
 const { game, board, disabled } = defineProps({
     game: { type: Object, default: null },
     board: { type: Object, default: null },
@@ -31,6 +33,7 @@ const resolvedComponent = computed(
         :game="game"
         :board="board"
         :disabled="disabled"
+        @completed="emit('completed')"
     />
 
     <div

@@ -34,7 +34,7 @@ class DailyGameCacheServiceTest extends TestCase
 
     protected function tearDown(): void
     {
-        config(['cache.enable' => null]);
+        config(['cache.cache_enable' => false]);
         Cache::flush();
 
         parent::tearDown();
@@ -102,7 +102,7 @@ class DailyGameCacheServiceTest extends TestCase
     public function test_cache_hit_returns_the_same_daily_game_without_a_database_query(): void
     {
         Cache::flush();
-        config(['cache.enable' => true]);
+        config(['cache.cache_enable' => true]);
 
         $this->travelTo(Carbon::parse('2026-09-01 09:00:00'));
 
@@ -127,7 +127,7 @@ class DailyGameCacheServiceTest extends TestCase
     public function test_cache_miss_with_existing_daily_game_returns_the_database_record_without_a_new_board(): void
     {
         Cache::flush();
-        config(['cache.enable' => true]);
+        config(['cache.cache_enable' => true]);
 
         $this->travelTo(Carbon::parse('2026-09-01 09:00:00'));
 

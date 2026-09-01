@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\CacheHelper;
+use App\Models\DailyGame;
 use App\Services\PageService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -30,10 +31,8 @@ class PageController extends Controller
     {
         $dailyGame = $this->pageService->dailyGameByGameSlug(CacheHelper::KEY_PLAY_GAME_PAGE, $slug);
 
-
         return Inertia::render('games/Play', [
             'dailyGame' => $dailyGame,
-            'serverNow' => now()->toIso8601String(),
         ]);
     }
 

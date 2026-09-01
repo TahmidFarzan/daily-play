@@ -9,7 +9,9 @@ use Carbon\CarbonInterface;
 class ZipBoardGenerator
 {
     public const DIFFICULTY_EASY = 'easy';
+
     public const DIFFICULTY_NORMAL = 'normal';
+
     public const DIFFICULTY_HARD = 'hard';
 
     protected const SIZE_BY_DIFFICULTY = [
@@ -20,18 +22,17 @@ class ZipBoardGenerator
 
     protected const GENERATION_ATTEMPTS = 64;
 
-
     public function generate(Game $game, CarbonInterface $gameDate, ?GameDifficulty $gameDifficulty = null): array
     {
         $settings = $this->settingsFor($gameDifficulty);
 
         $path = $this->generateHamiltonianPath($settings['rows'], $settings['cols']);
-        $clues = $this->placeClues($path, $settings['clues']);
 
         return [
             'rows' => $settings['rows'],
             'cols' => $settings['cols'],
-            'clues' => $clues,
+            'clues' => $this->placeClues($path, $settings['clues']),
+            'walls' => $this->wallsFromPath($path, $settings['rows'], $settings['cols']),
             'path' => $path,
         ];
     }
@@ -172,5 +173,45 @@ class ZipBoardGenerator
         }
 
         return $clues;
+    }
+
+    protected function wallsFromPath(array $path, int $rows, int $cols): array
+    {
+        $traversed = [];
+
+        for ($index = 1; $index < count($path); $index++) {
+            $from = $path[$index - 1];
+            $to = $path[$index];
+
+            if ($to['row'] === $from['row'] && $to['col'] === $from['col'] + 1) {
+                $traversed["{$from['row']}:{$from['col']}:right"] = true;
+            } elseif ($to['row'] === $from['row'] && $to['col'] === $from['col'] - 1) {
+                $traversed["{$to['row']}:{$to['col']}:right"] = true;
+            } elseif ($to['row'] === $from['row'] + 1 && $to['col'] === $from['col']) {
+                $traversed["{$from['row']}:{$from['col']}:down"] = true;
+            } elseif ($to['row'] === $from['row'] - 1 && $to['col'] === $from['col']) {
+                $traversed["{$to['row']}:{$to['col']}:down"] = true;
+            }
+        }
+
+        $walls = [];
+
+        for ($row = 0; $row < $rows; $row++) {
+            for ($col = 0; $col < $cols - 1; $col++) {
+                if (! isset($traversed["{$row}:{$col}:right"])) {
+                    $walls[] = ['row' => $row, 'col' => $col, 'direction' => 'right'];
+                }
+            }
+        }
+
+        for ($row = 0; $row < $rows - 1; $row++) {
+            for ($col = 0; $col < $cols; $col++) {
+                if (! isset($traversed["{$row}:{$col}:down"])) {
+                    $walls[] = ['row' => $row, 'col' => $col, 'direction' => 'down'];
+                }
+            }
+        }
+
+        return $walls;
     }
 }

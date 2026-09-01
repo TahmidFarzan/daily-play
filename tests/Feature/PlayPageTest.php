@@ -47,7 +47,7 @@ class PlayPageTest extends TestCase
 
         $response->assertInertia(fn (Assert $page) => $page
             ->component('games/Play')
-            ->has('serverNow')
+            ->missing('serverNow')
             ->missing('game')
             ->missing('board')
             ->missing('difficulty')
@@ -63,6 +63,7 @@ class PlayPageTest extends TestCase
                     ->where('rows', $dailyGame->board['rows'])
                     ->where('cols', $dailyGame->board['cols'])
                     ->has('clues')
+                    ->where('walls', $dailyGame->board['walls'])
                 )
                 ->has('game', fn (Assert $gameAssert) => $gameAssert
                     ->where('id', $dailyGame->game->id)
@@ -117,6 +118,7 @@ class PlayPageTest extends TestCase
         $this->assertArrayHasKey('rows', $board);
         $this->assertArrayHasKey('cols', $board);
         $this->assertArrayHasKey('clues', $board);
+        $this->assertArrayHasKey('walls', $board);
         $this->assertArrayNotHasKey('path', $board);
     }
 
