@@ -30,6 +30,7 @@ library.add(
 import {
     canAccessUser,
     canAccessGameDifficulty,
+        canAccessGame,
 } from "@/composables/useUserPermissions";
 
 const { authUser } = defineProps({
@@ -58,6 +59,10 @@ const canAccessUserComputed = computed(() => {
 
 const canAccessGameDifficultyComputed = computed(() => {
     return canAccessGameDifficulty(authUser);
+});
+
+const canAccessGameComputed = computed(() => {
+    return canAccessGame(authUser);
 });
 
 const toggleShowSubMenu = (key) => {
@@ -216,6 +221,19 @@ const isSubMenuVisible = (key) => {
                 >
                     <FontAwesomeIcon icon="layer-group" />
                     Game Difficulties
+                </a>
+
+                <a v-if="canAccessGameComputed"
+                    :href="route('back-office.games.index')"
+                    class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-100"
+                    :class="
+                        isCurrentPage('/back-office/games/*')
+                            ? 'bg-gray-200 font-medium'
+                            : ''
+                    "
+                >
+                    <FontAwesomeIcon icon="gamepad" />
+                    Games
                 </a>
             </div>
         </Transition>

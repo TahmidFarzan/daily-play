@@ -7,6 +7,8 @@ use App\Http\Controllers\BackOffice\MediaController;
 use App\Http\Controllers\BackOffice\UserController;
 use App\Http\Controllers\BackOffice\SettingController;
 use App\Http\Controllers\BackOffice\ActivityLogController;
+
+use App\Http\Controllers\BackOffice\GameController;
 use App\Http\Controllers\BackOffice\GameDifficultyController;
 
 //
@@ -111,6 +113,11 @@ Route::prefix('back-office')->name('back-office.')->middleware(['auth', 'verifie
         Route::delete('delete/{slug}', [UserController::class, 'delete'])->name('delete');
         Route::patch('active/{slug}', [UserController::class, 'active'])->name('active');
         Route::patch('inactive/{slug}', [UserController::class, 'inactive'])->name('inactive');
+    });
+
+    Route::prefix('games')->name('games.')->group(function () {
+        Route::get('/', [GameController::class, 'index'])->name('index');
+        Route::get('details/{slug}', [GameController::class, 'details'])->name('details');
     });
 
     Route::prefix('game-difficulties')->name('game-difficulties.')->group(function () {

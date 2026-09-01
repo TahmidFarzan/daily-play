@@ -6,7 +6,8 @@ const { clearByPrefix } = useApiCache()
 
 export const groups = {
     User: 'User',
-    GameDifficulty: "Game Difficulty"
+    GameDifficulty: "Game Difficulty",
+    Game: "Game"
 }
 
 export const access = {
@@ -57,11 +58,11 @@ export const hasPermission = async (authUser, module, permissionAccess) => {
         return false
     }
 
-    if ( authUser.is_super_admin ) {
+    if (authUser.is_super_admin) {
         return true
     }
 
-    const permissions = await getPermissions( authUser )
+    const permissions = await getPermissions(authUser)
 
     return permissions.some(
         permission =>
@@ -104,6 +105,9 @@ export const canDeleteUser = async (authUser, user) => {
         access.ForceDelete
     )
 }
+
+export const canAccessGame = async (authUser) => hasPermission(authUser, groups.Game, access.ViewAny)
+export const canViewGame = async (authUser) => hasPermission(authUser, groups.Game, access.View)
 
 export const canAccessGameDifficulty = async (authUser) => hasPermission(authUser, groups.GameDifficulty, access.ViewAny)
 export const canViewGameDifficulty = async (authUser) => hasPermission(authUser, groups.GameDifficulty, access.View)

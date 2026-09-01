@@ -17,12 +17,16 @@ class UserPermissionHelper
     public const ACCESS_FORCE_DELETE = 'Force delete';
 
     public const MODULE_USER            = 'User';
+
+    public const MODULE_GAME = 'Game';
     public const MODULE_GAME_DIFFICULTY = 'Game Difficulty';
 
     public static function modules(): Collection
     {
         return SystemHelper::toOptions([
             self::MODULE_USER,
+
+            self::MODULE_GAME,
             self::MODULE_GAME_DIFFICULTY,
         ]);
     }
@@ -46,6 +50,13 @@ class UserPermissionHelper
         }
 
         if ($moduleName == self::MODULE_GAME_DIFFICULTY) {
+            return SystemHelper::toOptions([
+                self::ACCESS_VIEW_ANY,
+                self::ACCESS_VIEW,
+            ]);
+        }
+
+        if ($moduleName == self::MODULE_GAME) {
             return SystemHelper::toOptions([
                 self::ACCESS_VIEW_ANY,
                 self::ACCESS_VIEW,
