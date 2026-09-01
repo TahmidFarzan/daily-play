@@ -133,4 +133,6 @@ return [
 
     'serializable_classes' => false,
 
+    // Custom
+    "cache_enable" => env("CACHE_ENABLE", false),
 ];

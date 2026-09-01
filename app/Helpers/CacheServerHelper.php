@@ -40,7 +40,7 @@ class CacheServerHelper
 
     public static function isConnected(): bool
     {
-        if (! config('cache.enable') || ! config('cache.default')) {
+        if (! config('cache.cache_enable') || ! config('cache.default')) {
             return false;
         }
 
