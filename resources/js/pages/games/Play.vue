@@ -7,7 +7,13 @@ import PlayerModal from '@/components/players/PlayerModal.vue'
 import { formatDate, formatTime } from '@/composables/useDateTime'
 import { formatSolveDuration, useGamePlayTimer } from '@/composables/useGamePlayTimer'
 import { progressionColor, softTintColor } from '@/composables/progressColors'
-import { readCachedPlayer, setCachedPlayer, clearCachedPlayer } from '@/composables/playerCache'
+import {
+    getPlayerCache,
+    setPlayerCache,
+    removePlayerCache,
+    stopPlayerCacheExpiration,
+    subscribePlayerCacheChanges,
+} from '@/composables/playerCache'
 
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
@@ -91,7 +97,7 @@ const activateGameplay = (player) => {
 }
 
 const verifyPlayer = async () => {
-    const cached = readCachedPlayer()
+    const cached = getPlayerCache()
 
     if (!cached) {
         playerLoading.value = false
@@ -108,7 +114,7 @@ const verifyPlayer = async () => {
 
         if (data?.status === 'success' && data?.data) {
             const backendPlayer = data.data
-            setCachedPlayer(backendPlayer)
+            setPlayerCache(backendPlayer)
             activateGameplay(backendPlayer)
             return
         }
@@ -116,7 +122,7 @@ const verifyPlayer = async () => {
         throw new Error('Invalid player response')
     } catch (error) {
         if (error?.response?.status === 404) {
-            clearCachedPlayer()
+            removePlayerCache()
             playerLoading.value = false
             playerModalOpen.value = true
             return
@@ -134,12 +140,21 @@ const retryPlayer = () => {
 }
 
 const handlePlayerSaved = (player) => {
-    setCachedPlayer(player)
+    setPlayerCache(player)
     playerModalOpen.value = false
     activateGameplay(player)
 }
 
+let unsubscribePlayerCacheChanges = () => {}
+
 onMounted(() => {
+    unsubscribePlayerCacheChanges = subscribePlayerCacheChanges(() => {
+        if (playerReady.value || playerLoading.value) return
+
+        playerError.value = null
+        playerModalOpen.value = true
+    })
+
     verifyPlayer()
 })
 
@@ -179,6 +194,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+    unsubscribePlayerCacheChanges()
+    stopPlayerCacheExpiration()
     window.removeEventListener('keydown', onKeydown)
     window.clearTimeout(resultTimer)
 })
