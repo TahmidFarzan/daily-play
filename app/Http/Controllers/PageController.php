@@ -8,28 +8,28 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use App\Http\Requests\PlayerRequest;
-use App\Http\Requests\GameScoreRequest;
+use App\Http\Requests\PlayerScoreRequest;
 use Illuminate\Http\JsonResponse;
 
 use App\Services\GameService;
 use App\Services\PlayerService;
-use App\Services\GameScoreService;
-use App\Services\GameChallengeService;
+use App\Services\PlayerScoreService;
+use App\Services\GamePlayService;
 
 class PageController extends Controller
 {
     protected GameService $gameService;
     protected PlayerService $playerService;
-    protected GameScoreService $gameScoreService;
-    protected GameChallengeService $gameChallengeService;
+    protected PlayerScoreService $playerScoreService;
+    protected GamePlayService $gamePlayService;
 
 
-    public function __construct( PlayerService $playerService, GameService $gameService, GameChallengeService $gameChallengeService, GameScoreService $gameScoreService,)
+    public function __construct( PlayerService $playerService, GameService $gameService, GamePlayService $gamePlayService, PlayerScoreService $playerScoreService,)
     {
         $this->playerService = $playerService;
         $this->gameService = $gameService;
-        $this->gameScoreService = $gameScoreService;
-        $this->gameChallengeService = $gameChallengeService;
+        $this->playerScoreService = $playerScoreService;
+        $this->gamePlayService = $gamePlayService;
     }
 
     public function home(Request $request): InertiaResponse
@@ -53,20 +53,20 @@ class PageController extends Controller
     public function gamePlay(string $slug): InertiaResponse
     {
         $game = $this->gameService->findBySlug(CacheHelper::KEY_PLAY_GAME_PAGE, $slug);
-        $gameChallenge = $this->gameChallengeService->findByGameSlug(CacheHelper::KEY_PLAY_GAME_PAGE, $game);
+        $gamePlay = $this->gamePlayService->findByGameSlug(CacheHelper::KEY_PLAY_GAME_PAGE, $game);
 
         return Inertia::render('games/Play', [
-            'gameChallenge' => $gameChallenge,
+            'gamePlay' => $gamePlay,
         ]);
     }
 
 
-    public function gameScoreSave(GameScoreRequest $request, string $slug): JsonResponse
+    public function playerScoreSave(PlayerScoreRequest $request, string $slug): JsonResponse
     {
         $game = $this->gameService->findBySlug(CacheHelper::KEY_GAME_DETAILS_PAGE, $slug);
-        $gameChallenge = $this->gameChallengeService->findByGameSlug(CacheHelper::KEY_PLAY_GAME_PAGE, $game);
+        $gamePlay = $this->gamePlayService->findByGameSlug(CacheHelper::KEY_PLAY_GAME_PAGE, $game);
 
-        $result = $this->gameScoreService->save($request, $gameChallenge);
+        $result = $this->playerScoreService->save($request, $gamePlay);
 
         return response()->json(
             $result,

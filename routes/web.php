@@ -181,7 +181,7 @@ Route::middleware(['response.cache:30,public,15,etag'])->group(function () {
         Route::get('{slug}/details', [PageController::class, 'gameDetails'])->name('details');
 
         Route::prefix('{slug}/score')->name('score.')->group(function () {
-            Route::post('save', [PageController::class, 'gameScoreSave'])->name('save');
+            Route::post('save', [PageController::class, 'playerScoreSave'])->name('save');
         });
     });
 });

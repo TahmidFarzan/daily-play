@@ -2,14 +2,14 @@
 
 namespace App\Services;
 
-use App\Models\GameScore;
-use App\Models\GameRanker;
+use App\Models\PlayerScore;
+use App\Models\PlayerRank;
 
-class GameRankerService
+class PlayerRankService
 {
-    public function recalculateRanks(int $gameChallengeId): void
+    public function recalculateRanks(int $gamePlayId): void
     {
-        $scores = GameScore::where('game_challenge_id', $gameChallengeId)
+        $scores = PlayerScore::where('game_play_id', $gamePlayId)
             ->orderBy('duration_ms')
             ->orderBy('backtracks')
             ->orderBy('id')
@@ -29,16 +29,16 @@ class GameRankerService
                 }
             }
 
-            GameRanker::updateOrCreate(
-                ['game_score_id' => $score->id],
-                ['player_id' => $score->player_id, 'rank' => $currentRank],
+            PlayerRank::updateOrCreate(
+                ['game_play_id' => $score->game_play_id, 'player_id' => $score->player_id],
+                ['rank' => $currentRank],
             );
         }
     }
 
-    public function playerRank(int $gameChallengeId, int $playerId): ?int
+    public function playerRank(int $gamePlayId, int $playerId): ?int
     {
-        $playerScore = GameScore::where('game_challenge_id', $gameChallengeId)
+        $playerScore = PlayerScore::where('game_play_id', $gamePlayId)
             ->where('player_id', $playerId)
             ->first();
 
@@ -46,7 +46,7 @@ class GameRankerService
             return null;
         }
 
-        $betterCount = GameScore::where('game_challenge_id', $gameChallengeId)
+        $betterCount = PlayerScore::where('game_play_id', $gamePlayId)
             ->where(function ($query) use ($playerScore) {
                 $query->where('duration_ms', '<', $playerScore->duration_ms)
                     ->orWhere(function ($query) use ($playerScore) {
@@ -59,9 +59,9 @@ class GameRankerService
         return $betterCount + 1;
     }
 
-    public function searchTopper(int $gameChallengeId, int $limit)
+    public function searchTopper(int $gamePlayId, int $limit)
     {
-        $scores = GameScore::where('game_challenge_id', $gameChallengeId)
+        $scores = PlayerScore::where('game_play_id', $gamePlayId)
             ->with('player:id,slug,name')
             ->orderBy('duration_ms')
             ->orderBy('backtracks')

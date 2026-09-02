@@ -19,7 +19,7 @@ class CacheHelper
     public const KEY_GAME = 'game';
     public const KEY_GAMES = 'games';
 
-    public const KEY_GAME_CHALLENGE = 'game-challenge';
+    public const KEY_GAME_PLAY = 'game-play';
 
     public const KEY_CURSOR = 'cursor';
     public const KEY_PER_PAGE = 'per-page';
@@ -32,7 +32,7 @@ class CacheHelper
     public const KEY_LAST_PAGE_NO = 'last-page-no';
 
     public const TAG_GAME = 'game';
-     public const TAG_GAME_CHALLENGE = 'game-challenge';
+    public const TAG_GAME_PLAY = 'game-play';
 
 
     public static function cacheKeyGenerateSingleRecordBySlug(string $key, string $secondKey, string $slug): string
@@ -106,11 +106,11 @@ class CacheHelper
     }
 
 
-    // GameChallenge
-    public static function cacheKeyGenerateSingleGameChallengeRecordByGameAndDate(string $key, string $secondKey, Game $game, $date): string
+    // GamePlay
+    public static function cacheKeyGenerateSingleGamePlayRecordByGameAndDate(string $key, string $secondKey, Game $game, $date): string
     {
         $cacheKey = "{$key}:{$secondKey}:";
-        $cacheKey .=  CacheHelper::KEY_GAME_CHALLENGE;
+        $cacheKey .=  CacheHelper::KEY_GAME_PLAY;
         $cacheKey .= ':' . CacheHelper::KEY_BY_GAME_SLUG . ":{$game->slug}";
         $cacheKey .= ':' . CacheHelper::KEY_BY_ID . ":{$date}";
         return $cacheKey;

@@ -51,13 +51,18 @@ class Player extends Model
         return 'slug';
     }
 
-    public function gameChallenges(): HasMany
+    public function gamePlays(): HasMany
     {
-        return $this->hasMany(GameChallenge::class);
+        return $this->hasMany(GamePlay::class);
     }
 
-    public function gameScores(): HasMany
+    public function playerScores(): HasMany
     {
-        return $this->hasMany(GameScore::class);
+        return $this->hasMany(PlayerScore::class);
+    }
+
+    public function playerRanks(): HasMany
+    {
+        return $this->hasMany(PlayerRank::class);
     }
 }

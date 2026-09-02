@@ -39,16 +39,16 @@ defineOptions({
     layout: Layout,
 })
 
-const { gameChallenge } = defineProps({
-    gameChallenge: { type: Object, default: null },
+const { gamePlay } = defineProps({
+    gamePlay: { type: Object, default: null },
 })
 
-const game = computed(() => gameChallenge?.game ?? {})
-const board = computed(() => gameChallenge?.board ?? {})
-const difficulty = computed(() => gameChallenge?.game_difficulty ?? null)
+const game = computed(() => gamePlay?.game ?? {})
+const board = computed(() => gamePlay?.board ?? {})
+const difficulty = computed(() => gamePlay?.game_difficulty ?? null)
 
 const dailyDateLabel = computed(() =>
-    gameChallenge?.game_date ? formatDate(gameChallenge.game_date) : '',
+    gamePlay?.game_date ? formatDate(gamePlay.game_date) : '',
 )
 
 const {
@@ -190,7 +190,7 @@ const submitScore = async () => {
     scoreState.value = 'submitting'
     scoreError.value = ''
 
-    const targetSlug = gameChallenge?.game?.slug
+    const targetSlug = gamePlay?.game?.slug
 
     try {
         const response = await apiClient.post(route('games.score.save', {

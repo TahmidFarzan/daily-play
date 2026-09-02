@@ -12,14 +12,14 @@ use Illuminate\Support\Str;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
-#[Table('game_rankers')]
+#[Table('player_ranks')]
 #[Fillable([
-    'game_score_id',
+    'game_play_id',
     'player_id',
     'rank',
     'slug',
 ])]
-class GameRanker extends Model
+class PlayerRank extends Model
 {
     use HasFactory, HasSlug;
 
@@ -53,9 +53,9 @@ class GameRanker extends Model
         return 'slug';
     }
 
-    public function gameScore(): BelongsTo
+    public function gamePlay(): BelongsTo
     {
-        return $this->belongsTo(GameScore::class);
+        return $this->belongsTo(GamePlay::class);
     }
 
     public function player(): BelongsTo

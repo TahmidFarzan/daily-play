@@ -12,9 +12,9 @@ use Illuminate\Support\Str;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
-#[Table('game_challenges')]
+#[Table('game_plays')]
 #[Fillable(['game_id', 'game_difficulty_id', 'game_date', 'board', 'starts_at', 'ends_at'])]
-class GameChallenge extends Model
+class GamePlay extends Model
 {
     use HasFactory, HasSlug;
 
@@ -52,8 +52,13 @@ class GameChallenge extends Model
         return $this->belongsTo(GameDifficulty::class, 'game_difficulty_id');
     }
 
-    public function gameScores(): HasMany
+    public function playerScores(): HasMany
     {
-        return $this->hasMany(GameScore::class);
+        return $this->hasMany(PlayerScore::class);
+    }
+
+    public function playerRanks(): HasMany
+    {
+        return $this->hasMany(PlayerRank::class);
     }
 }

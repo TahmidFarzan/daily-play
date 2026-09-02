@@ -4,22 +4,22 @@ namespace Tests\Feature;
 
 use App\Helpers\CacheHelper;
 use App\Models\Game;
-use App\Models\GameScore;
+use App\Models\PlayerScore;
 use App\Models\Player;
 use App\Models\User;
-use App\Services\Cache\GameChallengeCacheService;
+use App\Services\Cache\GamePlayCacheService;
 use Database\Seeders\GameDifficultySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
-class GameScoreRankingTest extends TestCase
+class PlayerScoreRankingTest extends TestCase
 {
     use RefreshDatabase;
 
     protected Game $game;
 
-    protected int $gameChallengeId;
+    protected int $gamePlayId;
 
     protected function setUp(): void
     {
@@ -37,15 +37,15 @@ class GameScoreRankingTest extends TestCase
 
         $this->game = Game::factory()->state(['name' => 'Zip'])->create();
 
-        $service = app(GameChallengeCacheService::class);
-        $challenge = $service->getRecordByGameAndDate(
+        $service = app(GamePlayCacheService::class);
+        $gamePlay = $service->getRecordByGameAndDate(
             CacheHelper::KEY_PLAY_GAME_PAGE,
             $this->game,
             now(),
             300,
         );
 
-        $this->gameChallengeId = $challenge->id;
+        $this->gamePlayId = $gamePlay->id;
     }
 
     protected function createPlayer(string $name = 'Player'): Player
@@ -142,13 +142,13 @@ class GameScoreRankingTest extends TestCase
 
         $this->assertSame('success', $result['status']);
 
-        $score = GameScore::where('game_challenge_id', $this->gameChallengeId)
+        $score = PlayerScore::where('game_play_id', $this->gamePlayId)
             ->where('player_id', $player->id)
             ->firstOrFail();
 
         $this->assertSame(70587, $score->duration_ms);
         $this->assertSame(0, $score->backtracks);
-        $this->assertSame($this->gameChallengeId, $score->game_challenge_id);
+        $this->assertSame($this->gamePlayId, $score->game_play_id);
         $this->assertSame($player->id, $score->player_id);
         $this->assertNotEmpty($score->slug);
     }
@@ -160,8 +160,8 @@ class GameScoreRankingTest extends TestCase
         $this->submitScore($player, 70587, 0);
         $this->submitScore($player, 70000, 2);
 
-        $this->assertSame(1, GameScore::where('player_id', $player->id)->count());
-        $this->assertSame(70587, GameScore::where('player_id', $player->id)->firstOrFail()->duration_ms);
+        $this->assertSame(1, PlayerScore::where('player_id', $player->id)->count());
+        $this->assertSame(70587, PlayerScore::where('player_id', $player->id)->firstOrFail()->duration_ms);
     }
 
     public function test_rank_and_top_five_are_returned_from_the_backend(): void
@@ -197,13 +197,13 @@ class GameScoreRankingTest extends TestCase
         $this->assertCount(5, $result['data']['top_rankers']);
     }
 
-    public function test_different_day_challenges_do_not_affect_each_others_ranking(): void
+    public function test_different_day_game_plays_do_not_affect_each_others_ranking(): void
     {
         $this->submitScore($this->createPlayer(), 50000, 0);
 
         $this->travelTo(Carbon::parse('2026-09-02 09:00:00'));
 
-        $service = app(GameChallengeCacheService::class);
+        $service = app(GamePlayCacheService::class);
         $dayTwo = $service->getRecordByGameAndDate(
             CacheHelper::KEY_PLAY_GAME_PAGE,
             $this->game,
@@ -219,7 +219,7 @@ class GameScoreRankingTest extends TestCase
         ])->assertOk()->json();
 
         $this->assertSame(1, $result['data']['rank']);
-        $this->assertSame(1, GameScore::where('game_challenge_id', $dayTwo->id)->count());
+        $this->assertSame(1, PlayerScore::where('game_play_id', $dayTwo->id)->count());
     }
 
     public function test_score_requires_valid_device_fields_from_request(): void
@@ -228,7 +228,7 @@ class GameScoreRankingTest extends TestCase
 
         $result = $this->submitScore($player, 12345, 1);
 
-        $score = GameScore::firstOrFail();
+        $score = PlayerScore::firstOrFail();
         $this->assertSame($player->id, $score->player_id);
         $this->assertSame(12345, $score->duration_ms);
         $this->assertSame(1, $score->backtracks);

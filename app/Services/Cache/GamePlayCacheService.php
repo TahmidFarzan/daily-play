@@ -4,7 +4,7 @@ namespace App\Services\Cache;
 
 use App\Helpers\CacheHelper;
 use App\Helpers\CacheServerHelper;
-use App\Models\GameChallenge;
+use App\Models\GamePlay;
 use App\Models\Game;
 use App\Models\GameDifficulty;
 use App\Services\GamePlay\ZipBoardGenerator;
@@ -13,13 +13,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-class GameChallengeCacheService
+class GamePlayCacheService
 {
     private int $cachedTTL = 86400;
 
-    private string $mainTag = CacheHelper::TAG_GAME_CHALLENGE;
+    private string $mainTag = CacheHelper::TAG_GAME_PLAY;
 
-    private string $secondKey = CacheHelper::KEY_GAME_CHALLENGE;
+    private string $secondKey = CacheHelper::KEY_GAME_PLAY;
 
     public function isConnected(): bool
     {
@@ -28,16 +28,16 @@ class GameChallengeCacheService
 
     public function clearCached(): void
     {
-        CacheServerHelper::clearCachedByTag([$this->mainTag, CacheHelper::TAG_GAME_CHALLENGE]);
-        CacheServerHelper::clearCachedByTag([$this->mainTag, CacheHelper::KEY_GAME_CHALLENGE]);
+        CacheServerHelper::clearCachedByTag([$this->mainTag, CacheHelper::TAG_GAME_PLAY]);
+        CacheServerHelper::clearCachedByTag([$this->mainTag, CacheHelper::KEY_GAME_PLAY]);
     }
 
-    public function getRecordByGameAndDate(string $key, Game $game, ?CarbonInterface $date = null, ?int $cachedTTL = null): GameChallenge
+    public function getRecordByGameAndDate(string $key, Game $game, ?CarbonInterface $date = null, ?int $cachedTTL = null): GamePlay
     {
         $date = ($date ?? now())->copy()->startOfDay();
         $dateString = $date->format('Y-m-d');
 
-        $cacheKey = CacheHelper::cacheKeyGenerateSingleGameChallengeRecordByGameAndDate($key, $this->secondKey, $game, $dateString);
+        $cacheKey = CacheHelper::cacheKeyGenerateSingleGamePlayRecordByGameAndDate($key, $this->secondKey, $game, $dateString);
 
         $record = CacheServerHelper::getCachedData(
             $cacheKey,
@@ -68,9 +68,9 @@ class GameChallengeCacheService
         return $record;
     }
 
-    private function dbRecordByGameAndDate(Game $game, string $dateString, bool $orFail = false): ?GameChallenge
+    private function dbRecordByGameAndDate(Game $game, string $dateString, bool $orFail = false): ?GamePlay
     {
-        $query = GameChallenge::query()
+        $query = GamePlay::query()
             ->with(['game', 'game.logo', 'gameDifficulty'])
             ->where('game_id', $game->id)
             ->whereDate('game_date', $dateString);
@@ -78,7 +78,7 @@ class GameChallengeCacheService
         return $orFail ? $query->firstOrFail() : $query->first();
     }
 
-    private function dbRecordCreate(Game $game, ?CarbonInterface $gameDate = null): GameChallenge
+    private function dbRecordCreate(Game $game, ?CarbonInterface $gameDate = null): GamePlay
     {
         $gameDate = ($gameDate ?? now())->copy()->startOfDay();
         $dateString = $gameDate->format('Y-m-d');
@@ -108,7 +108,7 @@ class GameChallengeCacheService
                         break;
                 }
 
-                GameChallenge::create([
+                GamePlay::create([
                     'game_id' => $game->id,
                     'game_difficulty_id' => $difficulty->id ?? null,
                     'game_date' => $dateString,
@@ -118,7 +118,7 @@ class GameChallengeCacheService
                 ]);
             });
         } catch (Throwable $exception) {
-            Log::error('Unable to create the game challenge.', [
+            Log::error('Unable to create the game play.', [
                 'exception' => $exception,
             ]);
         }
