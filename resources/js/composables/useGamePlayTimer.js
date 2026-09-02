@@ -34,8 +34,6 @@ export function useGamePlayTimer() {
         window.clearInterval(ticker)
     })
 
-    start()
-
     return {
         elapsedSeconds,
         start,

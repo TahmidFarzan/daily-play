@@ -8,6 +8,8 @@ use App\Services\PageService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use App\Http\Requests\PlayerRequest;
+use Illuminate\Http\JsonResponse;
 
 class PageController extends Controller
 {
@@ -43,5 +45,26 @@ class PageController extends Controller
         return Inertia::render('games/Details', [
             'game' => $game,
         ]);
+    }
+
+
+    public function playerGet(string $slug): JsonResponse
+    {
+        $result = $this->pageService->playerGet($slug);
+
+        return response()->json(
+            $result,
+            $result['status'] === 'success' ? 200 : 404
+        );
+    }
+
+    public function playerSave(PlayerRequest $request): JsonResponse
+    {
+        $result = $this->pageService->playerSave($request);
+
+        return response()->json(
+            $result,
+            $result['status'] === 'success' ? 200 : 500
+        );
     }
 }

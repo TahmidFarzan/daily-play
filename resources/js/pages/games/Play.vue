@@ -3,17 +3,31 @@ import { Head, router as inertiaJsRoute } from '@inertiajs/vue3'
 import Layout from '@/pages/layouts/PublicLayout.vue'
 import GameBoard from '@/components/games/GameBoard.vue'
 import MediaRenderer from '@/components/common/media/MediaRenderer.vue'
+import PlayerModal from '@/components/players/PlayerModal.vue'
 import { formatDate, formatTime } from '@/composables/useDateTime'
 import { formatSolveDuration, useGamePlayTimer } from '@/composables/useGamePlayTimer'
 import { progressionColor, softTintColor } from '@/composables/progressColors'
+import { readCachedPlayer, setCachedPlayer, clearCachedPlayer } from '@/composables/playerCache'
 
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
+import apiClient from '@/config/axios'
+
 import { library as FontAwesomeLibrary } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faArrowLeft, faCircleCheck, faGamepad, faHouse, faRotateLeft, faStopwatch, faXmark } from '@fortawesome/free-solid-svg-icons'
+import {
+    faArrowLeft,
+    faCircleCheck,
+    faGamepad,
+    faHouse,
+    faRotateLeft,
+    faSpinner,
+    faStopwatch,
+    faUser,
+    faXmark,
+} from '@fortawesome/free-solid-svg-icons'
 
-FontAwesomeLibrary.add(faArrowLeft, faCircleCheck, faGamepad, faHouse, faRotateLeft, faStopwatch, faXmark)
+FontAwesomeLibrary.add(faArrowLeft, faCircleCheck, faGamepad, faHouse, faRotateLeft, faSpinner, faStopwatch, faUser, faXmark)
 
 defineOptions({
     layout: Layout,
@@ -31,12 +45,18 @@ const dailyDateLabel = computed(() =>
     dailyGame?.game_date ? formatDate(dailyGame.game_date) : '',
 )
 
-const playedAt = new Date()
-const playStartedLabel = computed(() =>
-    `${formatDate(playedAt)} at ${formatTime(playedAt, 'h:i a')}`,
-)
+const { elapsedSeconds, start: startTimer, stop: stopTimer } = useGamePlayTimer()
 
-const { elapsedSeconds, stop: stopTimer } = useGamePlayTimer()
+const playerReady = ref(false)
+const playerLoading = ref(true)
+const playerError = ref(null)
+const playerModalOpen = ref(false)
+const currentPlayer = ref(null)
+
+const playedAt = ref(null)
+const playStartedLabel = computed(() =>
+    playedAt.value ? `${formatDate(playedAt.value)} at ${formatTime(playedAt.value, 'h:i a')}` : '',
+)
 
 const solved = ref(false)
 const showResult = ref(false)
@@ -61,6 +81,67 @@ const solvedBacktrackLabel = computed(() =>
 const handleBacktrackCount = (count) => {
     backtrackCount.value = count
 }
+
+const activateGameplay = (player) => {
+    currentPlayer.value = player
+    playedAt.value = new Date()
+    startTimer()
+    playerLoading.value = false
+    playerReady.value = true
+}
+
+const verifyPlayer = async () => {
+    const cached = readCachedPlayer()
+
+    if (!cached) {
+        playerLoading.value = false
+        playerModalOpen.value = true
+        return
+    }
+
+    try {
+        const response = await apiClient.get(route('players.get', {
+            slug: cached.slug,
+        }))
+
+        const data = response?.data
+
+        if (data?.status === 'success' && data?.data) {
+            const backendPlayer = data.data
+            setCachedPlayer(backendPlayer)
+            activateGameplay(backendPlayer)
+            return
+        }
+
+        throw new Error('Invalid player response')
+    } catch (error) {
+        if (error?.response?.status === 404) {
+            clearCachedPlayer()
+            playerLoading.value = false
+            playerModalOpen.value = true
+            return
+        }
+
+        playerLoading.value = false
+        playerError.value = 'Unable to verify your profile right now. Please try again.'
+    }
+}
+
+const retryPlayer = () => {
+    playerError.value = null
+    playerLoading.value = true
+    verifyPlayer()
+}
+
+const handlePlayerSaved = (player) => {
+    setCachedPlayer(player)
+    playerModalOpen.value = false
+    activateGameplay(player)
+}
+
+onMounted(() => {
+    verifyPlayer()
+})
 
 const handleSolved = (payload) => {
     if (solved.value) return
@@ -164,7 +245,10 @@ onBeforeUnmount(() => {
             </div>
 
             <div class="flex flex-col items-start gap-1.5 sm:items-end">
-                <p class="text-xs font-medium text-[var(--daily-play-text-muted)]">
+                <p
+                    v-if="playedAt"
+                    class="text-xs font-medium text-[var(--daily-play-text-muted)]"
+                >
                     Play at: {{ playStartedLabel }}
                 </p>
 
@@ -202,11 +286,60 @@ onBeforeUnmount(() => {
             {{ game.brief }}
         </div>
 
+        <div
+            v-if="playerLoading"
+            class="flex items-center justify-center gap-2 rounded-2xl border border-[var(--daily-play-border)] bg-[var(--daily-play-surface)] px-5 py-4 text-sm text-[var(--daily-play-text-muted)] shadow-sm"
+        >
+            <FontAwesomeIcon icon="spinner" spin class="text-[var(--daily-play-accent)]" />
+            Checking your profile&hellip;
+        </div>
+
+        <div
+            v-else-if="playerError"
+            class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--daily-play-danger)] bg-[var(--daily-play-surface)] px-5 py-4 shadow-sm"
+        >
+            <p class="text-sm font-medium text-[var(--daily-play-danger)]">
+                {{ playerError }}
+            </p>
+
+            <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-xl bg-[var(--daily-play-accent)] px-4 py-2 text-sm font-semibold text-[var(--daily-play-text-inverse)] transition hover:bg-[var(--daily-play-accent-hover)] active:bg-[var(--daily-play-accent-active)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--daily-play-accent)] focus-visible:ring-offset-2"
+                @click="retryPlayer"
+            >
+                <FontAwesomeIcon icon="rotate-left" class="text-xs" />
+                Try again
+            </button>
+        </div>
+
+        <div
+            v-if="playerReady && currentPlayer"
+            class="flex items-center gap-3 rounded-2xl border border-[var(--daily-play-border)] bg-[var(--daily-play-surface)] px-5 py-4 shadow-sm"
+        >
+            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--daily-play-accent-soft)]">
+                <FontAwesomeIcon
+                    icon="user"
+                    class="text-lg text-[var(--daily-play-accent-active)]"
+                />
+            </div>
+            <div class="min-w-0">
+                <p class="truncate text-sm font-semibold text-[var(--daily-play-text)]">
+                    {{ currentPlayer.name }}
+                </p>
+                <p
+                    v-if="currentPlayer.email || currentPlayer.mobile"
+                    class="truncate text-xs text-[var(--daily-play-text-muted)]"
+                >
+                    {{ [currentPlayer.email, currentPlayer.mobile].filter(Boolean).join(' · ') }}
+                </p>
+            </div>
+        </div>
+
         <div class="relative">
             <GameBoard
                 :game="game"
                 :board="board"
-                :disabled="solved"
+                :disabled="solved || !playerReady"
                 @completed="handleSolved"
                 @backtrack-count="handleBacktrackCount"
             />
@@ -224,6 +357,11 @@ onBeforeUnmount(() => {
             </p>
         </div>
     </section>
+
+    <PlayerModal
+        v-if="playerModalOpen"
+        @saved="handlePlayerSaved"
+    />
 
     <Teleport to="body">
         <Transition name="completion-modal">

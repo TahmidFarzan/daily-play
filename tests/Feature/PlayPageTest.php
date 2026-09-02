@@ -122,6 +122,21 @@ class PlayPageTest extends TestCase
         $this->assertArrayNotHasKey('path', $board);
     }
 
+    public function test_play_route_creates_daily_game_with_a_slug(): void
+    {
+        $this->travelTo(Carbon::parse('2026-09-01 09:00:00'));
+
+        $game = $this->createZipGame();
+
+        $response = $this->get(route('games.play', ['slug' => $game->slug]));
+
+        $response->assertSuccessful();
+
+        $dailyGame = DailyGame::where('game_id', $game->id)->whereDate('game_date', '2026-09-01')->firstOrFail();
+
+        $this->assertNotEmpty($dailyGame->slug);
+    }
+
     public function test_play_route_for_an_unknown_game_returns_404(): void
     {
         $this->travelTo(Carbon::parse('2026-09-01 09:00:00'));
