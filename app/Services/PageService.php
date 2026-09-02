@@ -92,15 +92,6 @@ class PageService
                 $email = $request->input('email');
                 $mobile = $request->input('mobile');
 
-                $device = [
-                    'user_agent' => $request->userAgent(),
-                    'ip' => $request->ip(),
-                    'accept_language' => $request->header('Accept-Language'),
-                    'platform' => $request->header('Sec-CH-UA-Platform'),
-                    'browser' => $request->header('Sec-CH-UA'),
-                    'mobile' => $request->header('Sec-CH-UA-Mobile'),
-                ];
-
                 $player = $slug ? Player::where('slug', $slug)->first() : null;
 
                 if (! $player && ($email || $mobile)) {
@@ -124,7 +115,6 @@ class PageService
                     $player->email = $email;
                     $player->mobile = $mobile;
                     $player->address = $request->input('address');
-                    $player->device = $device;
 
                     $player->save();
 
@@ -135,10 +125,6 @@ class PageService
                 $player->email = $email;
                 $player->mobile = $mobile;
                 $player->address = $request->input('address');
-
-                if ($player->device != $device) {
-                    $player->device = $device;
-                }
 
                 if ($player->isDirty()) {
                     $player->save();

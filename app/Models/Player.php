@@ -19,7 +19,6 @@ use Spatie\Sluggable\SlugOptions;
     'mobile',
     'address',
     'slug',
-    'device',
 ])]
 class Player extends Model
 {
@@ -30,7 +29,6 @@ class Player extends Model
     protected function casts(): array
     {
         return [
-            'device' => 'array',
             'created_at'        => 'datetime',
             'updated_at'        => 'datetime',
             'deleted_at'        => 'datetime',

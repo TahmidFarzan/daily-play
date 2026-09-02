@@ -19,7 +19,6 @@ return new class extends Migration
             $table->string('mobile')->nullable()->unique();
 
             $table->text('address')->nullable();
-            $table->json('device')->nullable();
             $table->string('slug')->unique();
             $table->timestamps();
         });
