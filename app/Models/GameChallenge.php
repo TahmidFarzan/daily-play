@@ -11,9 +11,9 @@ use Illuminate\Support\Str;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
-#[Table('daily_games')]
+#[Table('game_challenges')]
 #[Fillable(['game_id', 'game_difficulty_id', 'game_date', 'board', 'starts_at', 'ends_at'])]
-class DailyGame extends Model
+class GameChallenge extends Model
 {
     use HasFactory, HasSlug;
 

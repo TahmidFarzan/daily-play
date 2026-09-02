@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\DailyGame;
+use App\Models\GameChallenge;
 use App\Models\Game;
 use App\Models\User;
 use Database\Seeders\GameDifficultySeeder;
@@ -33,7 +33,7 @@ class PlayPageTest extends TestCase
         return Game::factory()->state(['name' => 'Zip'])->create();
     }
 
-    public function test_play_route_returns_200_with_the_daily_game_payload(): void
+    public function test_play_route_returns_200_with_the_game_challenge_payload(): void
     {
         $this->travelTo(Carbon::parse('2026-09-01 09:00:00'));
 
@@ -43,7 +43,7 @@ class PlayPageTest extends TestCase
 
         $response->assertSuccessful();
 
-        $dailyGame = DailyGame::where('game_id', $game->id)->whereDate('game_date', '2026-09-01')->firstOrFail();
+        $gameChallenge = GameChallenge::where('game_id', $game->id)->whereDate('game_date', '2026-09-01')->firstOrFail();
 
         $response->assertInertia(fn (Assert $page) => $page
             ->component('games/Play')
@@ -53,36 +53,36 @@ class PlayPageTest extends TestCase
             ->missing('difficulty')
             ->missing('startsAt')
             ->missing('endsAt')
-            ->has('dailyGame', fn (Assert $dailyGameAssert) => $dailyGameAssert
-                ->where('id', $dailyGame->id)
+            ->has('gameChallenge', fn (Assert $gameChallengeAssert) => $gameChallengeAssert
+                ->where('id', $gameChallenge->id)
                 ->has('slug')
                 ->where('game_date', '2026-09-01')
                 ->has('starts_at')
                 ->has('ends_at')
                 ->has('board', fn (Assert $boardAssert) => $boardAssert
-                    ->where('rows', $dailyGame->board['rows'])
-                    ->where('cols', $dailyGame->board['cols'])
+                    ->where('rows', $gameChallenge->board['rows'])
+                    ->where('cols', $gameChallenge->board['cols'])
                     ->has('clues')
-                    ->where('walls', $dailyGame->board['walls'])
+                    ->where('walls', $gameChallenge->board['walls'])
                 )
                 ->has('game', fn (Assert $gameAssert) => $gameAssert
-                    ->where('id', $dailyGame->game->id)
-                    ->where('slug', $dailyGame->game->slug)
-                    ->where('name', $dailyGame->game->name)
+                    ->where('id', $gameChallenge->game->id)
+                    ->where('slug', $gameChallenge->game->slug)
+                    ->where('name', $gameChallenge->game->name)
                     ->has('brief')
                     ->has('how_to_play')
                     ->has('logo')
                 )
                 ->has('gameDifficulty', fn (Assert $difficultyAssert) => $difficultyAssert
-                    ->where('id', $dailyGame->game_difficulty_id)
-                    ->where('slug', $dailyGame->gameDifficulty->slug)
-                    ->where('name', $dailyGame->gameDifficulty->name)
+                    ->where('id', $gameChallenge->game_difficulty_id)
+                    ->where('slug', $gameChallenge->gameDifficulty->slug)
+                    ->where('name', $gameChallenge->gameDifficulty->name)
                 )
             )
         );
     }
 
-    public function test_play_route_returns_the_same_daily_game_on_refresh(): void
+    public function test_play_route_returns_the_same_game_challenge_on_refresh(): void
     {
         $this->travelTo(Carbon::parse('2026-09-01 09:00:00'));
 
@@ -94,13 +94,13 @@ class PlayPageTest extends TestCase
         $second = $this->get(route('games.play', ['slug' => $game->slug]));
         $second->assertSuccessful();
 
-        $firstDailyGame = $first->viewData('page')['props']['dailyGame'];
-        $secondDailyGame = $second->viewData('page')['props']['dailyGame'];
+        $firstGameChallenge = $first->viewData('page')['props']['gameChallenge'];
+        $secondGameChallenge = $second->viewData('page')['props']['gameChallenge'];
 
-        $this->assertSame($firstDailyGame['id'], $secondDailyGame['id']);
-        $this->assertSame($firstDailyGame['board'], $secondDailyGame['board']);
-        $this->assertSame($firstDailyGame['gameDifficulty']['id'], $secondDailyGame['gameDifficulty']['id']);
-        $this->assertSame(1, DailyGame::count());
+        $this->assertSame($firstGameChallenge['id'], $secondGameChallenge['id']);
+        $this->assertSame($firstGameChallenge['board'], $secondGameChallenge['board']);
+        $this->assertSame($firstGameChallenge['gameDifficulty']['id'], $secondGameChallenge['gameDifficulty']['id']);
+        $this->assertSame(1, GameChallenge::count());
     }
 
     public function test_play_route_does_not_expose_the_solution_path(): void
@@ -113,7 +113,7 @@ class PlayPageTest extends TestCase
 
         $response->assertSuccessful();
 
-        $board = $response->viewData('page')['props']['dailyGame']['board'];
+        $board = $response->viewData('page')['props']['gameChallenge']['board'];
 
         $this->assertArrayHasKey('rows', $board);
         $this->assertArrayHasKey('cols', $board);
@@ -122,7 +122,7 @@ class PlayPageTest extends TestCase
         $this->assertArrayNotHasKey('path', $board);
     }
 
-    public function test_play_route_creates_daily_game_with_a_slug(): void
+    public function test_play_route_creates_game_challenge_with_a_slug(): void
     {
         $this->travelTo(Carbon::parse('2026-09-01 09:00:00'));
 
@@ -132,9 +132,9 @@ class PlayPageTest extends TestCase
 
         $response->assertSuccessful();
 
-        $dailyGame = DailyGame::where('game_id', $game->id)->whereDate('game_date', '2026-09-01')->firstOrFail();
+        $gameChallenge = GameChallenge::where('game_id', $game->id)->whereDate('game_date', '2026-09-01')->firstOrFail();
 
-        $this->assertNotEmpty($dailyGame->slug);
+        $this->assertNotEmpty($gameChallenge->slug);
     }
 
     public function test_play_route_for_an_unknown_game_returns_404(): void
@@ -144,6 +144,6 @@ class PlayPageTest extends TestCase
         $response = $this->get(route('games.play', ['slug' => 'not-a-game']));
 
         $response->assertNotFound();
-        $this->assertSame(0, DailyGame::count());
+        $this->assertSame(0, GameChallenge::count());
     }
 }

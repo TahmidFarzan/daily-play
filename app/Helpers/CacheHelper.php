@@ -3,7 +3,6 @@
 namespace App\Helpers;
 
 use App\Models\Game;
-use App\Models\DailyGame;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -20,7 +19,7 @@ class CacheHelper
     public const KEY_GAME = 'game';
     public const KEY_GAMES = 'games';
 
-    public const KEY_DAILY_GAME = 'daily-game';
+    public const KEY_GAME_CHALLENGE = 'game-challenge';
 
     public const KEY_CURSOR = 'cursor';
     public const KEY_PER_PAGE = 'per-page';
@@ -33,7 +32,7 @@ class CacheHelper
     public const KEY_LAST_PAGE_NO = 'last-page-no';
 
     public const TAG_GAME = 'game';
-     public const TAG_DAILY_GAME = 'daily-game';
+     public const TAG_GAME_CHALLENGE = 'game-challenge';
 
 
     public static function cacheKeyGenerateSingleRecordBySlug(string $key, string $secondKey, string $slug): string
@@ -107,11 +106,11 @@ class CacheHelper
     }
 
 
-    // DailyGame
-    public static function cacheKeyGenerateSingleDailyGameRecordByGameAndDate(string $key, string $secondKey, Game $game, $date): string
+    // GameChallenge
+    public static function cacheKeyGenerateSingleGameChallengeRecordByGameAndDate(string $key, string $secondKey, Game $game, $date): string
     {
         $cacheKey = "{$key}:{$secondKey}:";
-        $cacheKey .=  CacheHelper::KEY_DAILY_GAME;
+        $cacheKey .=  CacheHelper::KEY_GAME_CHALLENGE;
         $cacheKey .= ':' . CacheHelper::KEY_BY_GAME_SLUG . ":{$game->slug}";
         $cacheKey .= ':' . CacheHelper::KEY_BY_ID . ":{$date}";
         return $cacheKey;

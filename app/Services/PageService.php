@@ -4,9 +4,9 @@ namespace App\Services;
 
 use App\Helpers\CacheHelper;
 use App\Models\Player;
-use App\Models\DailyGame;
+use App\Models\GameChallenge;
 use App\Models\Game;
-use App\Services\Cache\DailyGameCacheService;
+use App\Services\Cache\GameChallengeCacheService;
 use App\Services\Cache\GameCacheService;
 use Illuminate\Http\Request;
 use App\Http\Requests\PlayerRequest;
@@ -21,12 +21,12 @@ class PageService
 
     protected GameCacheService $gameCacheService;
 
-    protected DailyGameCacheService $dailyGameCacheService;
+    protected GameChallengeCacheService $gameChallengeCacheService;
 
-    public function __construct(GameCacheService $gameCacheService, DailyGameCacheService $dailyGameCacheService)
+    public function __construct(GameCacheService $gameCacheService, GameChallengeCacheService $gameChallengeCacheService)
     {
         $this->gameCacheService = $gameCacheService;
-        $this->dailyGameCacheService = $dailyGameCacheService;
+        $this->gameChallengeCacheService = $gameChallengeCacheService;
     }
 
     public function gameBySlug(string $pageKey, string $slug): Game
@@ -37,11 +37,11 @@ class PageService
         return $this->gameCacheService->getRecordBySlug($fullKey, $slug, $this->cachedTTL);
     }
 
-    public function dailyGameByGameSlug(string $pageKey, string $slug): DailyGame
+    public function gameChallengeByGameSlug(string $pageKey, string $slug): GameChallenge
     {
         $game = $this->gameBySlug($pageKey, $slug);
 
-        return $this->dailyGameCacheService->getRecordByGameAndDate($pageKey, $game, now(), $this->cachedTTL);
+        return $this->gameChallengeCacheService->getRecordByGameAndDate($pageKey, $game, now(), $this->cachedTTL);
     }
 
     public function games(Request $request, string $pageKey): LengthAwarePaginator

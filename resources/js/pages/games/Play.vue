@@ -39,16 +39,16 @@ defineOptions({
     layout: Layout,
 })
 
-const { dailyGame } = defineProps({
-    dailyGame: { type: Object, default: null },
+const { gameChallenge } = defineProps({
+    gameChallenge: { type: Object, default: null },
 })
 
-const game = computed(() => dailyGame?.game ?? {})
-const board = computed(() => dailyGame?.board ?? {})
-const difficulty = computed(() => dailyGame?.game_difficulty ?? null)
+const game = computed(() => gameChallenge?.game ?? {})
+const board = computed(() => gameChallenge?.board ?? {})
+const difficulty = computed(() => gameChallenge?.game_difficulty ?? null)
 
 const dailyDateLabel = computed(() =>
-    dailyGame?.game_date ? formatDate(dailyGame.game_date) : '',
+    gameChallenge?.game_date ? formatDate(gameChallenge.game_date) : '',
 )
 
 const { elapsedSeconds, start: startTimer, stop: stopTimer } = useGamePlayTimer()

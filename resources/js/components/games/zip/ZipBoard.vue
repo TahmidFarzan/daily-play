@@ -376,7 +376,7 @@ const wallStyle = (wall) => {
             class="inline-flex items-center gap-1.5 font-medium text-[var(--daily-play-accent-active)]"
         >
             <FontAwesomeIcon icon="circle-check" />
-            Board complete!
+            Challange complete!
         </p>
     </div>
 </template>

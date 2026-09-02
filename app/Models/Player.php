@@ -51,8 +51,8 @@ class Player extends Model
         return 'slug';
     }
 
-    public function dailyGames(): HasMany
+    public function gameChallenges(): HasMany
     {
-        return $this->hasMany(DailyGame::class);
+        return $this->hasMany(GameChallenge::class);
     }
 }
