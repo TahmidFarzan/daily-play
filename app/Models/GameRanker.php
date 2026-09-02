@@ -5,22 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Str;
 
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
-#[Table('players')]
+#[Table('game_rankers')]
 #[Fillable([
-    'name',
-    'email',
-    'mobile',
-    'address',
+    'game_score_id',
+    'player_id',
+    'rank',
     'slug',
 ])]
-class Player extends Model
+class GameRanker extends Model
 {
     use HasFactory, HasSlug;
 
@@ -32,7 +31,7 @@ class Player extends Model
             'created_at'        => 'datetime',
             'updated_at'        => 'datetime',
             'deleted_at'        => 'datetime',
-            'password'          => 'hashed',
+            'rank'              => 'integer',
         ];
     }
 
@@ -40,7 +39,10 @@ class Player extends Model
     {
         return SlugOptions::create()
             ->saveSlugsTo('slug')
-            ->generateSlugsFrom("name")
+            ->generateSlugsFrom(function ($model) {
+                $mainSlug = Str::random(5).'-'.now()->timestamp;
+                return "{$mainSlug}";
+            })
             ->doNotGenerateSlugsOnUpdate()
             ->slugsShouldBeNoLongerThan(255)
             ->usingSuffixGenerator(fn() => Str::lower(Str::random(5)));
@@ -51,13 +53,13 @@ class Player extends Model
         return 'slug';
     }
 
-    public function gameChallenges(): HasMany
+    public function gameScore(): BelongsTo
     {
-        return $this->hasMany(GameChallenge::class);
+        return $this->belongsTo(GameScore::class);
     }
 
-    public function gameScores(): HasMany
+    public function player(): BelongsTo
     {
-        return $this->hasMany(GameScore::class);
+        return $this->belongsTo(Player::class);
     }
 }

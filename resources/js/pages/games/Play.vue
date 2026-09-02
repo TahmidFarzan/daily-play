@@ -5,7 +5,7 @@ import GameBoard from '@/components/games/GameBoard.vue'
 import MediaRenderer from '@/components/common/media/MediaRenderer.vue'
 import PlayerModal from '@/components/players/PlayerModal.vue'
 import { formatDate, formatTime } from '@/composables/useDateTime'
-import { formatSolveDuration, useGamePlayTimer } from '@/composables/useGamePlayTimer'
+import { formatDurationMs, formatSolveDuration, useGamePlayTimer } from '@/composables/useGamePlayTimer'
 import { progressionColor, softTintColor } from '@/composables/progressColors'
 import {
     getPlayerCache,
@@ -51,7 +51,12 @@ const dailyDateLabel = computed(() =>
     gameChallenge?.game_date ? formatDate(gameChallenge.game_date) : '',
 )
 
-const { elapsedSeconds, start: startTimer, stop: stopTimer } = useGamePlayTimer()
+const {
+    elapsedSeconds,
+    elapsedMs,
+    start: startTimer,
+    stop: stopTimer,
+} = useGamePlayTimer()
 
 const playerReady = ref(false)
 const playerLoading = ref(true)
@@ -69,6 +74,10 @@ const showResult = ref(false)
 const navigating = ref(false)
 const finalSolveTime = ref(null)
 const backtrackCount = ref(0)
+
+const scoreState = ref('idle')
+const scoreError = ref('')
+const scoreResult = ref(null)
 
 let resultTimer = null
 
@@ -162,14 +171,49 @@ const handleSolved = (payload) => {
     if (solved.value) return
 
     solved.value = true
-    finalSolveTime.value = formatSolveDuration(elapsedSeconds.value)
-    backtrackCount.value = payload?.backtrackCount ?? backtrackCount.value
     stopTimer()
+
+    finalSolveTime.value = formatDurationMs(elapsedMs.value)
+    backtrackCount.value = payload?.backtrackCount ?? backtrackCount.value
+
+    submitScore()
 
     window.clearTimeout(resultTimer)
     resultTimer = window.setTimeout(() => {
         showResult.value = true
     }, 700)
+}
+
+const submitScore = async () => {
+    if (scoreState.value === 'submitting' || scoreState.value === 'success') return
+
+    scoreState.value = 'submitting'
+    scoreError.value = ''
+
+    const targetSlug = gameChallenge?.game?.slug
+
+    try {
+        const response = await apiClient.post(route('games.score.save', {
+            slug: targetSlug,
+        }), {
+            player_id: currentPlayer.value?.id,
+            duration_ms: Math.round(elapsedMs.value),
+            backtracks: backtrackCount.value,
+        })
+
+        const data = response?.data
+
+        if (data?.status === 'success' && data?.data) {
+            scoreResult.value = data.data
+            scoreState.value = 'success'
+            return
+        }
+
+        throw new Error(data?.message || 'Failed to save score.')
+    } catch (error) {
+        scoreState.value = 'error'
+        scoreError.value = 'Failed to save your score. Please try again.'
+    }
 }
 
 const closeResult = () => {
@@ -444,6 +488,76 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
 
+                    <div
+                        v-if="scoreState === 'success' && scoreResult"
+                        class="mt-6 flex items-center justify-center gap-2 rounded-xl border border-[var(--daily-play-accent)] bg-[var(--daily-play-accent-soft)] px-4 py-3"
+                    >
+                        <p class="text-xs font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
+                            Your Rank
+                        </p>
+                        <p class="font-mono text-2xl font-bold tabular-nums text-[var(--daily-play-accent-active)]">
+                            #{{ scoreResult.rank }}
+                        </p>
+                    </div>
+
+                    <div
+                        v-if="scoreState === 'success' && scoreResult?.top_rankers?.length"
+                        class="mt-6 rounded-xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] p-4 text-left"
+                    >
+                        <p class="mb-3 text-xs font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
+                            Top Rankers
+                        </p>
+
+                        <ul class="space-y-2">
+                            <li
+                                v-for="(entry, index) in scoreResult.top_rankers"
+                                :key="`${entry.player_id}-${index}`"
+                                class="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5"
+                            >
+                                <div class="flex min-w-0 items-center gap-3">
+                                    <span class="w-6 shrink-0 font-mono text-sm font-bold tabular-nums text-[var(--daily-play-accent-active)]">
+                                        #{{ entry.rank }}
+                                    </span>
+                                    <span class="truncate text-sm font-medium text-[var(--daily-play-text)]">
+                                        {{ entry.player?.name || 'Player' }}
+                                    </span>
+                                </div>
+
+                                <div class="flex shrink-0 items-center gap-3 font-mono text-xs tabular-nums text-[var(--daily-play-text-muted)]">
+                                    <span>{{ formatDurationMs(entry.duration_ms) }}</span>
+                                    <span>{{ entry.backtracks }} bt</span>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div
+                        v-if="scoreState === 'submitting'"
+                        class="mt-6 flex items-center justify-center gap-2 rounded-xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-4 py-3 text-sm text-[var(--daily-play-text-muted)]"
+                    >
+                        <FontAwesomeIcon icon="spinner" spin class="text-[var(--daily-play-accent)]" />
+                        Submitting your score&hellip;
+                    </div>
+
+                    <div
+                        v-if="scoreState === 'error'"
+                        class="mt-6 space-y-3"
+                    >
+                        <p class="rounded-xl bg-[var(--daily-play-background)] px-4 py-2.5 text-sm font-medium text-[var(--daily-play-danger)]">
+                            {{ scoreError }}
+                        </p>
+
+                        <button
+                            type="button"
+                            class="completion-retry inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--daily-play-accent)] bg-[var(--daily-play-accent-soft)] px-4 py-2.5 text-sm font-semibold text-[var(--daily-play-accent-active)] transition hover:bg-[var(--daily-play-accent)] hover:text-[var(--daily-play-text-inverse)]"
+                            :disabled="scoreState === 'submitting'"
+                            @click="submitScore"
+                        >
+                            <FontAwesomeIcon icon="rotate-left" class="text-xs" />
+                            Try again
+                        </button>
+                    </div>
+
                     <button
                         type="button"
                         class="completion-home"
@@ -556,6 +670,15 @@ onBeforeUnmount(() => {
 }
 
 .completion-home:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.completion-retry {
+    border: 1px solid var(--daily-play-accent);
+}
+
+.completion-retry:disabled {
     opacity: 0.6;
     cursor: not-allowed;
 }

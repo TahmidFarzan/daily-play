@@ -1,31 +1,33 @@
 import { onBeforeUnmount, ref } from 'vue'
 
 export function useGamePlayTimer() {
-    let startedAtMs = Date.now()
+    let startedAtMs = 0
     let stopped = false
     let ticker = null
 
     const elapsedSeconds = ref(0)
+    const elapsedMs = ref(0)
 
-    const update = () => {
-        if (stopped) return
+    const measure = () => {
+        const raw = Math.max(0, performance.now() - startedAtMs)
 
-        elapsedSeconds.value = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000))
+        elapsedMs.value = raw
+        elapsedSeconds.value = Math.floor(raw / 1000)
     }
 
     const start = () => {
-        startedAtMs = Date.now()
+        startedAtMs = performance.now()
         stopped = false
 
-        update()
+        measure()
         window.clearInterval(ticker)
-        ticker = window.setInterval(update, 500)
+        ticker = window.setInterval(measure, 250)
     }
 
     const stop = () => {
         if (stopped) return
 
-        update()
+        measure()
         stopped = true
         window.clearInterval(ticker)
     }
@@ -36,6 +38,7 @@ export function useGamePlayTimer() {
 
     return {
         elapsedSeconds,
+        elapsedMs,
         start,
         stop,
     }
@@ -60,4 +63,22 @@ export const formatSolveDuration = (totalSeconds) => {
     const seconds = total % 60
 
     return `${hours}hr ${String(minutes).padStart(2, '0')}min ${String(seconds).padStart(2, '0')}s`
+}
+
+export const formatDurationMs = (totalMs) => {
+    const total = Math.max(0, Math.trunc(totalMs))
+    const ms = total % 1000
+    const totalSeconds = Math.floor(total / 1000)
+    const seconds = totalSeconds % 60
+    const totalMinutes = Math.floor(totalSeconds / 60)
+    const minutes = totalMinutes % 60
+    const hours = Math.floor(totalMinutes / 60)
+
+    const mm = String(minutes).padStart(2, '0')
+    const ss = String(seconds).padStart(2, '0')
+    const mmm = String(ms).padStart(3, '0')
+
+    return hours > 0
+        ? `${hours}:${mm}:${ss}.${mmm}`
+        : `${mm}:${ss}.${mmm}`
 }

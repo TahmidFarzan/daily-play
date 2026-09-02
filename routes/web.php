@@ -177,12 +177,16 @@ Route::get('/', function () {
 Route::middleware(['response.cache:30,public,15,etag'])->group(function () {
     Route::get('home', [PageController::class, 'home'])->name('home');
     Route::prefix('games')->name('games.')->group(function () {
-        Route::get('play/{slug}', [PageController::class, 'gamePlay'])->name('play');
-        Route::get('details/{slug}', [PageController::class, 'gameDetails'])->name('details');
+        Route::get('{slug}/play', [PageController::class, 'gamePlay'])->name('play');
+        Route::get('{slug}/details', [PageController::class, 'gameDetails'])->name('details');
+
+        Route::prefix('{slug}/score')->name('score.')->group(function () {
+            Route::post('save', [PageController::class, 'gameScoreSave'])->name('save');
+        });
     });
 });
 
 Route::prefix('players')->name('players.')->group(function () {
-    Route::get('get/{slug}', [PageController::class, 'playerGet'])->name('get');
+    Route::get('{slug}/get', [PageController::class, 'playerGet'])->name('get');
     Route::post('save', [PageController::class, 'playerSave'])->name('save');
 });

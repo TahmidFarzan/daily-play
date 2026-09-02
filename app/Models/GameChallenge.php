@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
@@ -49,5 +50,10 @@ class GameChallenge extends Model
     public function gameDifficulty(): BelongsTo
     {
         return $this->belongsTo(GameDifficulty::class, 'game_difficulty_id');
+    }
+
+    public function gameScores(): HasMany
+    {
+        return $this->hasMany(GameScore::class);
     }
 }
