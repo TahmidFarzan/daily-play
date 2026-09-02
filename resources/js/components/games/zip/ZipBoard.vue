@@ -186,6 +186,27 @@ const glowColor = computed(() => (segments.value.length > 0
 const nodeRadius = computed(() => metrics.cell * 0.13)
 const headRadius = computed(() => metrics.cell * 0.2)
 
+const markerRadius = computed(() => Math.max(0, metrics.cell * 0.32))
+const markerFontSize = computed(() => Math.max(11, Math.round(metrics.cell * 0.3)))
+
+const markers = computed(() => cells.value
+    .filter((cell) => cell.clue !== null)
+    .map((cell) => {
+        const index = path.value.findIndex(
+            (pathCell) => pathCell.row === cell.row && pathCell.col === cell.col,
+        )
+
+        return {
+            number: cell.clue,
+            cx: pointFor(cell.row, cell.col).x,
+            cy: pointFor(cell.row, cell.col).y,
+            radius: markerRadius.value,
+            font: markerFontSize.value,
+            completed: index !== -1,
+            color: segmentColorAt(Math.max(0, index)),
+        }
+    }))
+
 const cellClass = (cell) => {
     const base = 'relative flex aspect-square items-center justify-center rounded-[4px] bg-[var(--daily-play-surface)] text-sm font-semibold transition-colors sm:text-base'
 
@@ -257,12 +278,10 @@ const wallStyle = (wall) => {
                             ? `Clue ${cell.clue}`
                             : `Cell row ${cell.row + 1}, column ${cell.col + 1}`
                     "
-                >
-                    {{ cell.clue ?? '' }}
-                </div>
+                />
 
                 <svg
-                    class="pointer-events-none absolute inset-0 z-10 h-full w-full"
+                    class="pointer-events-none absolute inset-0 z-10 h-full w-full overflow-hidden rounded-lg"
                     aria-hidden="true"
                     :viewBox="svgViewBox"
                 >
@@ -304,6 +323,34 @@ const wallStyle = (wall) => {
                         stroke-width="3"
                         vector-effect="non-scaling-stroke"
                     />
+
+                    <g
+                        v-for="marker in markers"
+                        :key="`marker-${marker.number}`"
+                        :transform="`translate(${marker.cx} ${marker.cy})`"
+                    >
+                        <g
+                            class="marker-marker"
+                            :class="{ 'marker-pop': marker.completed }"
+                            :style="{ '--marker-color': marker.color }"
+                        >
+                            <circle
+                                :r="marker.radius"
+                                :fill="marker.completed ? marker.color : 'var(--daily-play-surface)'"
+                                :stroke="marker.completed ? marker.color : 'var(--daily-play-accent-active)'"
+                                stroke-width="2"
+                                vector-effect="non-scaling-stroke"
+                            />
+                            <text
+                                text-anchor="middle"
+                                dominant-baseline="central"
+                                :font-size="marker.font"
+                                :fill="marker.completed ? '#FFFFFF' : 'var(--daily-play-accent-active)'"
+                            >
+                                {{ marker.number }}
+                            </text>
+                        </g>
+                    </g>
                 </svg>
 
                 <div
@@ -351,6 +398,38 @@ const wallStyle = (wall) => {
 
     100% {
         filter: drop-shadow(0 0 6px var(--path-glow-color));
+    }
+}
+
+.marker-marker {
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+}
+
+.marker-pop {
+    animation: marker-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes marker-pop {
+    0% {
+        transform: scale(0.82);
+        filter: drop-shadow(0 0 0 var(--marker-color));
+    }
+
+    60% {
+        transform: scale(1.12);
+        filter: drop-shadow(0 0 6px var(--marker-color));
+    }
+
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 3px var(--marker-color));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .marker-pop {
+        animation: none;
     }
 }
 </style>
