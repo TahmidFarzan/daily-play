@@ -2,14 +2,14 @@
 
 namespace App\Services;
 
-use App\Models\PlayerScore;
-use App\Models\PlayerRank;
+use App\Models\GamePlayResult;
+use App\Models\GamePlayRanker;
 
 class PlayerRankService
 {
     public function recalculateRanks(int $gamePlayId): void
     {
-        $scores = PlayerScore::where('game_play_id', $gamePlayId)
+        $scores = GamePlayResult::where('game_play_id', $gamePlayId)
             ->orderBy('duration_ms')
             ->orderBy('backtracks')
             ->orderBy('id')
@@ -29,7 +29,7 @@ class PlayerRankService
                 }
             }
 
-            PlayerRank::updateOrCreate(
+            GamePlayRanker::updateOrCreate(
                 ['game_play_id' => $score->game_play_id, 'player_id' => $score->player_id],
                 ['rank' => $currentRank],
             );
@@ -38,7 +38,7 @@ class PlayerRankService
 
     public function playerRank(int $gamePlayId, int $playerId): ?int
     {
-        $playerScore = PlayerScore::where('game_play_id', $gamePlayId)
+        $playerScore = GamePlayResult::where('game_play_id', $gamePlayId)
             ->where('player_id', $playerId)
             ->first();
 
@@ -46,7 +46,7 @@ class PlayerRankService
             return null;
         }
 
-        $betterCount = PlayerScore::where('game_play_id', $gamePlayId)
+        $betterCount = GamePlayResult::where('game_play_id', $gamePlayId)
             ->where(function ($query) use ($playerScore) {
                 $query->where('duration_ms', '<', $playerScore->duration_ms)
                     ->orWhere(function ($query) use ($playerScore) {
@@ -61,7 +61,7 @@ class PlayerRankService
 
     public function searchTopper(int $gamePlayId, int $limit)
     {
-        $scores = PlayerScore::where('game_play_id', $gamePlayId)
+        $scores = GamePlayResult::where('game_play_id', $gamePlayId)
             ->with('player:id,slug,name')
             ->orderBy('duration_ms')
             ->orderBy('backtracks')

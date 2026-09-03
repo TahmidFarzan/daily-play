@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use App\Http\Requests\PlayerRequest;
-use App\Http\Requests\PlayerScoreRequest;
+use App\Http\Requests\GamePlayResultRequest;
 use Illuminate\Http\JsonResponse;
 
 use App\Services\GameService;
@@ -61,7 +61,7 @@ class PageController extends Controller
     }
 
 
-    public function playerScoreSave(PlayerScoreRequest $request, string $slug): JsonResponse
+    public function playerScoreSave(GamePlayResultRequest $request, string $slug): JsonResponse
     {
         $game = $this->gameService->findBySlug(CacheHelper::KEY_GAME_DETAILS_PAGE, $slug);
         $gamePlay = $this->gamePlayService->findByGameSlug(CacheHelper::KEY_PLAY_GAME_PAGE, $game);

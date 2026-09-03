@@ -56,13 +56,13 @@ class Player extends Model
         return $this->hasMany(GamePlay::class);
     }
 
-    public function playerScores(): HasMany
+    public function gamePlayResults(): HasMany
     {
-        return $this->hasMany(PlayerScore::class);
+        return $this->hasMany(GamePlayResult::class);
     }
 
-    public function playerRanks(): HasMany
+    public function gamePlayRankers(): HasMany
     {
-        return $this->hasMany(PlayerRank::class);
+        return $this->hasMany(GamePlayRanker::class);
     }
 }

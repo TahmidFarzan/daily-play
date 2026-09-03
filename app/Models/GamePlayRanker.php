@@ -12,16 +12,14 @@ use Illuminate\Support\Str;
 use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
-#[Table('player_scores')]
+#[Table('game_play_rankers')]
 #[Fillable([
     'game_play_id',
     'player_id',
-    'duration_ms',
-    'backtracks',
-    'device',
+    'rank',
     'slug',
 ])]
-class PlayerScore extends Model
+class GamePlayRanker extends Model
 {
     use HasFactory, HasSlug;
 
@@ -33,9 +31,7 @@ class PlayerScore extends Model
             'created_at'        => 'datetime',
             'updated_at'        => 'datetime',
             'deleted_at'        => 'datetime',
-            'duration_ms'       => 'integer',
-            'backtracks'        => 'integer',
-            'device'            => 'array',
+            'rank'              => 'integer',
         ];
     }
 
@@ -45,7 +41,6 @@ class PlayerScore extends Model
             ->saveSlugsTo('slug')
             ->generateSlugsFrom(function ($model) {
                 $mainSlug = Str::random(5).'-'.now()->timestamp;
-
                 return "{$mainSlug}";
             })
             ->doNotGenerateSlugsOnUpdate()

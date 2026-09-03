@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\GamePlay;
-use App\Models\PlayerScore;
-use App\Http\Requests\PlayerScoreRequest;
+use App\Models\GamePlayResult;
+use App\Http\Requests\GamePlayResultRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Exception;
@@ -19,17 +19,17 @@ class PlayerScoreService
         $this->playerRankService = $playerRankService;
     }
 
-    public function save(PlayerScoreRequest $request, GamePlay $gamePlay)
+    public function save(GamePlayResultRequest $request, GamePlay $gamePlay)
     {
         try {
             $playerId = (int) $request->input('player_id');
 
             $playerScore = DB::transaction(function () use ($request, $gamePlay, $playerId) {
 
-                $playerScore = PlayerScore::where('game_play_id', $gamePlay->id) ->where('player_id', $playerId)->first();
+                $playerScore = GamePlayResult::where('game_play_id', $gamePlay->id) ->where('player_id', $playerId)->first();
 
                 if (! $playerScore) {
-                    $playerScore = new PlayerScore();
+                    $playerScore = new GamePlayResult();
 
                     $playerScore->game_play_id = $gamePlay->id;
                     $playerScore->player_id = $playerId;

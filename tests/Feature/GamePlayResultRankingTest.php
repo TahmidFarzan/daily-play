@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Helpers\CacheHelper;
 use App\Models\Game;
-use App\Models\PlayerScore;
+use App\Models\GamePlayResult;
 use App\Models\Player;
 use App\Models\User;
 use App\Services\Cache\GamePlayCacheService;
@@ -13,7 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
-class PlayerScoreRankingTest extends TestCase
+class GamePlayResultRankingTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -142,7 +142,7 @@ class PlayerScoreRankingTest extends TestCase
 
         $this->assertSame('success', $result['status']);
 
-        $score = PlayerScore::where('game_play_id', $this->gamePlayId)
+        $score = GamePlayResult::where('game_play_id', $this->gamePlayId)
             ->where('player_id', $player->id)
             ->firstOrFail();
 
@@ -160,8 +160,8 @@ class PlayerScoreRankingTest extends TestCase
         $this->submitScore($player, 70587, 0);
         $this->submitScore($player, 70000, 2);
 
-        $this->assertSame(1, PlayerScore::where('player_id', $player->id)->count());
-        $this->assertSame(70587, PlayerScore::where('player_id', $player->id)->firstOrFail()->duration_ms);
+        $this->assertSame(1, GamePlayResult::where('player_id', $player->id)->count());
+        $this->assertSame(70587, GamePlayResult::where('player_id', $player->id)->firstOrFail()->duration_ms);
     }
 
     public function test_rank_and_top_five_are_returned_from_the_backend(): void
@@ -219,7 +219,7 @@ class PlayerScoreRankingTest extends TestCase
         ])->assertOk()->json();
 
         $this->assertSame(1, $result['data']['rank']);
-        $this->assertSame(1, PlayerScore::where('game_play_id', $dayTwo->id)->count());
+        $this->assertSame(1, GamePlayResult::where('game_play_id', $dayTwo->id)->count());
     }
 
     public function test_score_requires_valid_device_fields_from_request(): void
@@ -228,7 +228,7 @@ class PlayerScoreRankingTest extends TestCase
 
         $result = $this->submitScore($player, 12345, 1);
 
-        $score = PlayerScore::firstOrFail();
+        $score = GamePlayResult::firstOrFail();
         $this->assertSame($player->id, $score->player_id);
         $this->assertSame(12345, $score->duration_ms);
         $this->assertSame(1, $score->backtracks);
