@@ -32,6 +32,6 @@ class GameService
         $fullKey = $pageKey;
         $fullKey .= ':' . CacheHelper::KEY_GAMES;
 
-        return $this->gameCacheService->getRecords($fullKey, $request, $this->cachedTTL);
+        return $this->gameCacheService->getRecords($fullKey, $request, $this->cachedTTL, 15);
     }
 }

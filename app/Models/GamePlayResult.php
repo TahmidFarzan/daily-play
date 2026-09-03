@@ -32,7 +32,6 @@ class GamePlayResult extends Model
         return [
             'created_at'        => 'datetime',
             'updated_at'        => 'datetime',
-            'deleted_at'        => 'datetime',
             'duration_ms'       => 'integer',
             'backtracks'        => 'integer',
             'device'            => 'array',

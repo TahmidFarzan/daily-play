@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\Cache;
 
 use App\Helpers\CacheHelper;
@@ -84,7 +85,7 @@ class GameCacheService
         return (int) $lastPage;
     }
 
-    public function getRecords(string $key, Request $request, int | null $cachedTTL = null): LengthAwarePaginator
+    public function getRecords(string $key, Request $request, int | null $cachedTTL = null, int|null $perPage = null): LengthAwarePaginator
     {
         $perPage = $perPage ?? $this->perPage;
         $cacheKey = CacheHelper::cacheKeyGenerateForRecordsRequest($key, $this->secondKey, $request, $perPage);

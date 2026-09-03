@@ -12,9 +12,12 @@ use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
+use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class GamePlayCacheService
 {
+    private int $perPage   = 5000;
     private int $cachedTTL = 86400;
 
     private string $mainTag = CacheHelper::TAG_GAME_PLAY;
@@ -66,6 +69,67 @@ class GamePlayCacheService
         }
 
         return $record;
+    }
+
+    public function searchRecordsByGame(string $key, Game $game, Request $request, int | null $perPage = null, ?int $cachedTTL = null): LengthAwarePaginator
+    {
+        $perPage = $perPage ?? $this->perPage;
+        $cacheKey = CacheHelper::cacheKeyGenerateGamePlayRecordsByGame($key, $this->secondKey, $game, $request, $perPage);
+
+        $records = CacheServerHelper::getCachedData(
+            $cacheKey,
+            [
+                $key,
+                $this->mainTag,
+            ]
+        );
+
+        if (! $records) {
+            $records = $this->dbRecordsByGame($game, $request, $perPage);
+
+
+            CacheServerHelper::cachedData(
+                $cacheKey,
+                $records,
+                $cachedTTL ?? $this->cachedTTL,
+                [
+                    $key,
+                    $this->mainTag,
+                ]
+            );
+        }
+
+        return $records;
+    }
+
+    private function getPerPage(int | null $perPage = null): int
+    {
+        return $perPage ?? $this->perPage;
+    }
+
+    private function dbRecordsByGame(Game $game, Request $request, int | null $perPage = null ): LengthAwarePaginator
+    {
+        $request ??= request();
+
+        $query = GamePlay::with(['gameDifficulty'])->where('game_id', $game->id);
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $likeSearch = "%{$search}%";
+
+            $query->whereAny([
+                'game_date',
+                'slug',
+            ], 'like', $likeSearch);
+        }
+
+        if ($request->filled('date')) {
+            $date = $request->input('date');
+            $date = is_string($date) ? new \DateTime($date) : $date;
+            $query->whereDate('game_date', '<=', $date);
+        }
+
+        return $query->orderByDesc('id')->paginate($this->getPerPage($request->input("per_page", $perPage)))->appends($request->all());
     }
 
     private function dbRecordByGameAndDate(Game $game, string $dateString, bool $orFail = false): ?GamePlay

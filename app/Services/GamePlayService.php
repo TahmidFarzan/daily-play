@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Models\Game;
 use App\Models\GamePlay;
+use Illuminate\Http\Request;
 use App\Services\Cache\GamePlayCacheService;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class GamePlayService
 {
@@ -17,8 +19,13 @@ class GamePlayService
         $this->gamePlayCacheService = $gamePlayCacheService;
     }
 
-    public function findByGameSlug(string $pageKey, Game $game): GamePlay
+    public function findByGame(string $pageKey, Game $game): GamePlay
     {
         return $this->gamePlayCacheService->getRecordByGameAndDate($pageKey, $game, now(), $this->cachedTTL);
+    }
+
+    public function searchByGame(Request $request, string $pageKey, Game $game): LengthAwarePaginator
+    {
+        return $this->gamePlayCacheService->searchRecordsByGame($pageKey, $game, $request, 10, $this->cachedTTL);
     }
 }

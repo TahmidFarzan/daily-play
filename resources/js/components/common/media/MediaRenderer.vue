@@ -1,9 +1,13 @@
 <script setup>
-const { media, mediaClass } = defineProps({
+const { media, mediaClass, hideCaption } = defineProps({
     media: { type: Object, required: true },
     mediaClass: {
         type: String,
         default: 'w-full h-full object-contain rounded-lg border border-gray-200 shadow-sm'
+    },
+    hideCaption: {
+        type: Boolean,
+        default: false
     }
 })
 </script>
@@ -14,7 +18,7 @@ const { media, mediaClass } = defineProps({
             <img :src="media?.preview_url || media?.original_url" :alt="media?.custom_properties?.alt" :srcset="media?.media_srcset"
                 loading="lazy" :class="mediaClass" />
 
-            <figcaption v-if="media?.custom_properties?.caption" class="mt-2 text-sm text-gray-500 text-center">
+            <figcaption v-if="!hideCaption && media?.custom_properties?.caption" class="mt-2 text-sm text-gray-500 text-center">
                 {{ media?.custom_properties?.caption }}
             </figcaption>
         </figure>

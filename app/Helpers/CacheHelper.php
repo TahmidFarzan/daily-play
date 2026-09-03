@@ -20,6 +20,7 @@ class CacheHelper
     public const KEY_GAMES = 'games';
 
     public const KEY_GAME_PLAY = 'game-play';
+    public const KEY_GAME_PLAYS = 'game-plays';
 
     public const KEY_CURSOR = 'cursor';
     public const KEY_PER_PAGE = 'per-page';
@@ -110,9 +111,34 @@ class CacheHelper
     public static function cacheKeyGenerateSingleGamePlayRecordByGameAndDate(string $key, string $secondKey, Game $game, $date): string
     {
         $cacheKey = "{$key}:{$secondKey}:";
-        $cacheKey .=  CacheHelper::KEY_GAME_PLAY;
+
+        $cacheKey .= ':' . CacheHelper::KEY_GAME_PLAY;
         $cacheKey .= ':' . CacheHelper::KEY_BY_GAME_SLUG . ":{$game->slug}";
         $cacheKey .= ':' . CacheHelper::KEY_BY_ID . ":{$date}";
+        return $cacheKey;
+    }
+
+    public static function cacheKeyGenerateGamePlayRecordsByGame(string $key, string $secondKey, Game $game, Request $request, int | null $perPage = null): string
+    {
+        $cacheKey = "{$key}:{$secondKey}:";
+
+        $cacheKey .= ':' . CacheHelper::KEY_GAME_PLAYS;
+        $cacheKey .= ':' . CacheHelper::KEY_BY_GAME_SLUG . ":{$game->slug}";
+
+        if ($request->input()) {
+            $cacheData = $request->except([
+                '_token',
+            ]);
+
+            ksort($cacheData);
+
+            $cacheKey .= ':' . md5(json_encode($cacheData));
+        }
+        else{
+            if($perPage){
+                $cacheKey .= ':'.self::KEY_PER_PAGE."={$perPage}";
+            }
+        }
         return $cacheKey;
     }
 

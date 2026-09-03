@@ -41,19 +41,21 @@ class PageController extends Controller
         ]);
     }
 
-    public function gameDetails(string $slug): InertiaResponse
+    public function gameDetails(Request $request, string $slug): InertiaResponse
     {
         $game = $this->gameService->findBySlug(CacheHelper::KEY_GAME_DETAILS_PAGE, $slug);
+        $gamePlays = $this->gamePlayService->searchByGame($request, CacheHelper::KEY_GAME_DETAILS_PAGE, $game);
 
         return Inertia::render('games/Details', [
             'game' => $game,
+            'gamePlays' => $gamePlays,
         ]);
     }
 
     public function gamePlay(string $slug): InertiaResponse
     {
         $game = $this->gameService->findBySlug(CacheHelper::KEY_PLAY_GAME_PAGE, $slug);
-        $gamePlay = $this->gamePlayService->findByGameSlug(CacheHelper::KEY_PLAY_GAME_PAGE, $game);
+        $gamePlay = $this->gamePlayService->findByGame(CacheHelper::KEY_PLAY_GAME_PAGE, $game);
 
         return Inertia::render('games/Play', [
             'gamePlay' => $gamePlay,
@@ -64,7 +66,7 @@ class PageController extends Controller
     public function gamePlayResultSave(GamePlayResultRequest $request, string $slug): JsonResponse
     {
         $game = $this->gameService->findBySlug(CacheHelper::KEY_GAME_DETAILS_PAGE, $slug);
-        $gamePlay = $this->gamePlayService->findByGameSlug(CacheHelper::KEY_PLAY_GAME_PAGE, $game);
+        $gamePlay = $this->gamePlayService->findByGame(CacheHelper::KEY_PLAY_GAME_PAGE, $game);
 
         $result = $this->gamePlayResultService->save($request, $gamePlay);
 
