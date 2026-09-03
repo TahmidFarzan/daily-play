@@ -635,14 +635,38 @@ onBeforeUnmount(() => {
 
                     <div
                         v-if="scoreState === 'success' && scoreResult"
-                        class="mt-5 flex flex-col items-center justify-center gap-1.5 rounded-xl border border-[var(--daily-play-accent)] bg-[var(--daily-play-accent-soft)] px-4 py-3 sm:flex-row sm:gap-3"
+                        class="mt-5 rounded-xl border border-[var(--daily-play-accent)] bg-[var(--daily-play-accent-soft)] px-4 py-3 text-left"
                     >
-                        <p class="text-xs font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
-                            Your Rank
+                        <p class="text-xs font-semibold uppercase tracking-wide text-[var(--daily-play-text-muted)]">
+                            Your Result
                         </p>
-                        <p class="font-mono text-3xl font-bold tabular-nums text-[var(--daily-play-accent-active)] sm:text-4xl">
-                            #{{ scoreResult.rank }}
-                        </p>
+
+                        <div class="mt-1.5 flex min-w-0 items-center gap-2.5">
+                            <span class="shrink-0 font-mono text-lg font-bold tabular-nums text-[var(--daily-play-accent-active)]">
+                                #{{ scoreResult.rank }}
+                            </span>
+                            <span
+                                class="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--daily-play-text)]"
+                                :title="scoreResult?.current_player?.name || 'Player'"
+                            >
+                                {{ scoreResult?.current_player?.name || 'Player' }}
+                            </span>
+                        </div>
+
+                        <div class="mt-1.5 space-y-0.5 text-xs text-[var(--daily-play-text-muted)]">
+                            <p class="flex items-center gap-1.5">
+                                <span class="font-medium uppercase tracking-wide">Time:</span>
+                                <span class="font-mono font-semibold tabular-nums text-[var(--daily-play-text)]">
+                                    {{ formatHumanDuration(scoreResult?.score?.duration_ms ?? 0) }}
+                                </span>
+                            </p>
+                            <p class="flex items-center gap-1.5">
+                                <span class="font-medium uppercase tracking-wide">Backtracks:</span>
+                                <span class="font-mono font-semibold tabular-nums text-[var(--daily-play-text)]">
+                                    {{ scoreResult?.score?.backtracks ?? backtrackCount.value }}
+                                </span>
+                            </p>
+                        </div>
                     </div>
 
                     <div
