@@ -9,12 +9,13 @@ import { faGamepad } from '@fortawesome/free-solid-svg-icons'
 
 FontAwesomeLibrary.add(faGamepad)
 
-const emit = defineEmits(['completed', 'backtrack-count'])
+const emit = defineEmits(['completed', 'backtrack-count', 'state-change'])
 
-const { game, board, disabled } = defineProps({
+const { game, board, disabled, initialState } = defineProps({
     game: { type: Object, default: null },
     board: { type: Object, default: null },
     disabled: { type: Boolean, default: false },
+    initialState: { type: Object, default: null },
 })
 
 const boardComponents = {
@@ -33,8 +34,10 @@ const resolvedComponent = computed(
         :game="game"
         :board="board"
         :disabled="disabled"
+        :initial-state="initialState"
         @completed="emit('completed', $event)"
         @backtrack-count="emit('backtrack-count', $event)"
+        @state-change="emit('state-change', $event)"
     />
 
     <div

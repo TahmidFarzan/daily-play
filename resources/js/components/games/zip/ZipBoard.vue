@@ -10,11 +10,12 @@ import { segmentColorAt } from '@/composables/progressColors'
 
 FontAwesomeLibrary.add(faCircleCheck)
 
-const emit = defineEmits(['completed', 'backtrack-count'])
+const emit = defineEmits(['completed', 'backtrack-count', 'state-change'])
 
-const { board, disabled } = defineProps({
+const { board, disabled, initialState } = defineProps({
     board: { type: Object, default: null },
     disabled: { type: Boolean, default: false },
+    initialState: { type: Object, default: null },
 })
 
 const boardSource = computed(() => board)
@@ -34,7 +35,28 @@ const {
     canStartDragAt,
     startDrag,
     traceToward,
+    restoreState,
 } = useZipPlay(boardSource)
+
+let hydrated = false
+
+const emitStateChange = () => {
+    emit('state-change', {
+        path: path.value.map((cell) => ({ row: cell.row, col: cell.col })),
+        currentCell: currentCell.value ? { row: currentCell.value.row, col: currentCell.value.col } : null,
+        backtrackCount: backtrackCount.value,
+        complete: complete.value,
+    })
+}
+
+watch(() => initialState, (state) => {
+    if (hydrated || !state) return
+
+    restoreState(state)
+    hydrated = true
+}, { immediate: true })
+
+watch([path, currentCell, backtrackCount], emitStateChange, { deep: true })
 
 const isDragging = ref(false)
 let activePointerId = null

@@ -185,6 +185,38 @@ export function useZipPlay(boardSource) {
         }
     }
 
+    const restoreState = (state) => {
+        if (!state || typeof state !== 'object') return
+
+        if (Array.isArray(state.path)) {
+            path.value = state.path.map((cell) => ({
+                row: Number(cell.row),
+                col: Number(cell.col),
+            }))
+        }
+
+        if (
+            state.currentCell
+            && Number.isFinite(state.currentCell.row)
+            && Number.isFinite(state.currentCell.col)
+        ) {
+            currentCell.value = {
+                row: Number(state.currentCell.row),
+                col: Number(state.currentCell.col),
+            }
+        } else if (Array.isArray(state.path) && state.path.length > 0) {
+            const last = state.path[state.path.length - 1]
+
+            currentCell.value = { row: Number(last.row), col: Number(last.col) }
+        }
+
+        if (Number.isFinite(state.backtrackCount)) {
+            backtrackCount.value = Number(state.backtrackCount)
+        }
+
+        complete.value = false
+    }
+
     return {
         rows,
         cols,
@@ -202,5 +234,6 @@ export function useZipPlay(boardSource) {
         startDrag,
         moveTo,
         traceToward,
+        restoreState,
     }
 }

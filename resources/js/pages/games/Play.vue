@@ -14,6 +14,7 @@ import {
     stopPlayerCacheExpiration,
     subscribePlayerCacheChanges,
 } from '@/composables/playerCache'
+import { useGamePlayPersistence } from '@/composables/useGamePlayPersistence'
 
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
@@ -54,8 +55,11 @@ const dailyDateLabel = computed(() =>
 const {
     elapsedSeconds,
     elapsedMs,
+    isPaused,
     start: startTimer,
     stop: stopTimer,
+    pause: pauseTimer,
+    resume: resumeTimer,
 } = useGamePlayTimer()
 
 const playerReady = ref(false)
@@ -63,6 +67,21 @@ const playerLoading = ref(true)
 const playerError = ref(null)
 const playerModalOpen = ref(false)
 const currentPlayer = ref(null)
+
+const gamePlayRef = computed(() => gamePlay)
+const restorationReady = ref(false)
+const restoredGameState = ref(null)
+const latestGameState = ref(null)
+
+const {
+    restore: restorePersistence,
+    save: savePersistence,
+    clear: clearPersistence,
+} = useGamePlayPersistence(gamePlayRef, currentPlayer)
+
+const initialState = computed(() =>
+    restorationReady.value ? restoredGameState.value : null,
+)
 
 const playedAt = ref(null)
 const playStartedLabel = computed(() =>
@@ -97,12 +116,111 @@ const handleBacktrackCount = (count) => {
     backtrackCount.value = count
 }
 
+let isRestoringGamePlay = true
+
+const isGameplayActive = () =>
+    restorationReady.value
+    && !solved.value
+    && document.visibilityState === 'visible'
+    && document.hasFocus()
+
+const syncTimerActivity = () => {
+    if (solved.value || !restorationReady.value) return
+
+    const active = isGameplayActive()
+
+    if (active && isPaused.value) {
+        resumeTimer()
+    } else if (!active && !isPaused.value) {
+        pauseTimer()
+    }
+}
+
+const persistGameplay = () => {
+    if (isRestoringGamePlay || solved.value) return
+    if (!latestGameState.value) return
+
+    savePersistence({
+        durationMs: Math.round(elapsedMs.value),
+        game: latestGameState.value,
+    })
+}
+
+const handleGameStateChange = (gameState) => {
+    latestGameState.value = gameState
+
+    if (isRestoringGamePlay || solved.value) return
+
+    savePersistence({
+        durationMs: Math.round(elapsedMs.value),
+        game: gameState,
+    })
+}
+
+const handlePageHide = () => {
+    if (isRestoringGamePlay || solved.value) return
+
+    persistGameplay()
+}
+
+const handleVisibilityChange = () => {
+    if (isRestoringGamePlay || solved.value) return
+
+    if (document.visibilityState === 'hidden') {
+        persistGameplay()
+        syncTimerActivity()
+    } else {
+        syncTimerActivity()
+    }
+}
+
+const handleWindowBlur = () => {
+    if (isRestoringGamePlay || solved.value) return
+
+    persistGameplay()
+    syncTimerActivity()
+}
+
+const handleWindowFocus = () => {
+    if (isRestoringGamePlay || solved.value) return
+
+    syncTimerActivity()
+}
+
+let persistenceTimer = null
+
+const schedulePersistenceTimer = () => {
+    if (persistenceTimer) {
+        window.clearInterval(persistenceTimer)
+    }
+
+    persistenceTimer = window.setInterval(persistGameplay, 1000)
+}
+
 const activateGameplay = (player) => {
     currentPlayer.value = player
+
+    const snapshot = restorePersistence()
+
+    if (snapshot && snapshot.game) {
+        restoredGameState.value = snapshot.game
+        latestGameState.value = snapshot.game
+        startTimer(Math.round(snapshot.durationMs ?? 0))
+    } else {
+        restoredGameState.value = null
+        latestGameState.value = null
+        startTimer()
+    }
+
     playedAt.value = new Date()
-    startTimer()
-    playerLoading.value = false
+    restorationReady.value = true
     playerReady.value = true
+    playerLoading.value = false
+
+    isRestoringGamePlay = false
+
+    schedulePersistenceTimer()
+    syncTimerActivity()
 }
 
 const verifyPlayer = async () => {
@@ -164,6 +282,11 @@ onMounted(() => {
         playerModalOpen.value = true
     })
 
+    window.addEventListener('pagehide', handlePageHide)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('blur', handleWindowBlur)
+    window.addEventListener('focus', handleWindowFocus)
+
     verifyPlayer()
 })
 
@@ -172,6 +295,9 @@ const handleSolved = (payload) => {
 
     solved.value = true
     stopTimer()
+    restorationReady.value = false
+    window.clearInterval(persistenceTimer)
+    clearPersistence()
 
     finalSolveTime.value = formatDurationMs(elapsedMs.value)
     backtrackCount.value = payload?.backtrackCount ?? backtrackCount.value
@@ -241,7 +367,12 @@ onBeforeUnmount(() => {
     unsubscribePlayerCacheChanges()
     stopPlayerCacheExpiration()
     window.removeEventListener('keydown', onKeydown)
+    window.removeEventListener('pagehide', handlePageHide)
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
+    window.removeEventListener('blur', handleWindowBlur)
+    window.removeEventListener('focus', handleWindowFocus)
     window.clearTimeout(resultTimer)
+    window.clearInterval(persistenceTimer)
 })
 </script>
 
@@ -401,8 +532,10 @@ onBeforeUnmount(() => {
                 :game="game"
                 :board="board"
                 :disabled="solved || !playerReady"
+                :initial-state="initialState"
                 @completed="handleSolved"
                 @backtrack-count="handleBacktrackCount"
+                @state-change="handleGameStateChange"
             />
         </div>
 
@@ -447,42 +580,42 @@ onBeforeUnmount(() => {
                     </button>
 
                     <div
-                        class="check-badge mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--daily-play-accent-soft)]"
+                        class="check-badge mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-[var(--daily-play-accent-soft)]"
                     >
                         <FontAwesomeIcon
                             icon="circle-check"
-                            class="text-3xl text-[var(--daily-play-accent-active)]"
+                            class="text-7xl text-[var(--daily-play-accent-active)]"
                         />
                     </div>
 
                     <h2
                         id="daily-play-completion-title"
-                        class="mt-4 text-2xl font-bold tracking-tight text-[var(--daily-play-text)]"
+                        class="mt-7 text-5xl font-bold tracking-tight text-[var(--daily-play-text)] sm:text-6xl"
                     >
                         Puzzle Complete
                     </h2>
 
-                    <div class="mt-6 grid gap-3 sm:grid-cols-2">
+                    <div class="mt-10 grid gap-6 sm:grid-cols-2">
                         <div
-                            class="stat-item rounded-xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-4 py-3"
+                            class="stat-item rounded-3xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-8 py-7"
                         >
-                            <p class="text-xs font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
+                            <p class="text-base font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
                                 Time
                             </p>
                             <p
-                                class="mt-1 font-mono text-xl font-semibold tabular-nums text-[var(--daily-play-text)]"
+                                class="mt-3 font-mono text-5xl font-semibold tabular-nums text-[var(--daily-play-text)] sm:text-6xl"
                             >
                                 {{ finalSolveTime }}
                             </p>
                         </div>
 
                         <div
-                            class="stat-item rounded-xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-4 py-3"
+                            class="stat-item rounded-3xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-8 py-7"
                         >
-                            <p class="text-xs font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
+                            <p class="text-base font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
                                 Backtracks
                             </p>
-                            <p class="mt-1 text-xl font-semibold text-[var(--daily-play-text)]">
+                            <p class="mt-3 text-4xl font-semibold text-[var(--daily-play-text)] sm:text-5xl">
                                 {{ solvedBacktrackLabel }}
                             </p>
                         </div>
@@ -490,40 +623,40 @@ onBeforeUnmount(() => {
 
                     <div
                         v-if="scoreState === 'success' && scoreResult"
-                        class="mt-6 flex items-center justify-center gap-2 rounded-xl border border-[var(--daily-play-accent)] bg-[var(--daily-play-accent-soft)] px-4 py-3"
+                        class="mt-10 flex flex-col items-center justify-center gap-3 rounded-3xl border border-[var(--daily-play-accent)] bg-[var(--daily-play-accent-soft)] px-8 py-7 sm:flex-row sm:gap-6"
                     >
-                        <p class="text-xs font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
+                        <p class="text-lg font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
                             Your Rank
                         </p>
-                        <p class="font-mono text-2xl font-bold tabular-nums text-[var(--daily-play-accent-active)]">
+                        <p class="font-mono text-7xl font-bold tabular-nums text-[var(--daily-play-accent-active)]">
                             #{{ scoreResult.rank }}
                         </p>
                     </div>
 
                     <div
                         v-if="scoreState === 'success' && scoreResult?.top_rankers?.length"
-                        class="mt-6 rounded-xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] p-4 text-left"
+                        class="mt-10 rounded-3xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] p-8 text-left"
                     >
-                        <p class="mb-3 text-xs font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
+                        <p class="mb-5 text-lg font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
                             Top Rankers
                         </p>
 
-                        <ul class="space-y-2">
+                        <ul class="space-y-4">
                             <li
                                 v-for="(entry, index) in scoreResult.top_rankers"
                                 :key="`${entry.player_id}-${index}`"
-                                class="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5"
+                                class="flex items-center justify-between gap-4 rounded-2xl px-5 py-3.5"
                             >
-                                <div class="flex min-w-0 items-center gap-3">
-                                    <span class="w-6 shrink-0 font-mono text-sm font-bold tabular-nums text-[var(--daily-play-accent-active)]">
+                                <div class="flex min-w-0 items-center gap-5">
+                                    <span class="w-8 shrink-0 font-mono text-2xl font-bold tabular-nums text-[var(--daily-play-accent-active)]">
                                         #{{ entry.rank }}
                                     </span>
-                                    <span class="truncate text-sm font-medium text-[var(--daily-play-text)]">
+                                    <span class="truncate text-lg font-medium text-[var(--daily-play-text)]">
                                         {{ entry.player?.name || 'Player' }}
                                     </span>
                                 </div>
 
-                                <div class="flex shrink-0 items-center gap-3 font-mono text-xs tabular-nums text-[var(--daily-play-text-muted)]">
+                                <div class="flex shrink-0 items-center gap-5 font-mono text-base tabular-nums text-[var(--daily-play-text-muted)]">
                                     <span>{{ formatDurationMs(entry.duration_ms) }}</span>
                                     <span>{{ entry.backtracks }} bt</span>
                                 </div>
@@ -533,7 +666,7 @@ onBeforeUnmount(() => {
 
                     <div
                         v-if="scoreState === 'submitting'"
-                        class="mt-6 flex items-center justify-center gap-2 rounded-xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-4 py-3 text-sm text-[var(--daily-play-text-muted)]"
+                        class="mt-10 flex items-center justify-center gap-3 rounded-3xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-8 py-5 text-lg text-[var(--daily-play-text-muted)]"
                     >
                         <FontAwesomeIcon icon="spinner" spin class="text-[var(--daily-play-accent)]" />
                         Submitting your score&hellip;
@@ -541,19 +674,19 @@ onBeforeUnmount(() => {
 
                     <div
                         v-if="scoreState === 'error'"
-                        class="mt-6 space-y-3"
+                        class="mt-8 space-y-4"
                     >
-                        <p class="rounded-xl bg-[var(--daily-play-background)] px-4 py-2.5 text-sm font-medium text-[var(--daily-play-danger)]">
+                        <p class="rounded-2xl bg-[var(--daily-play-background)] px-5 py-4 text-lg font-medium text-[var(--daily-play-danger)]">
                             {{ scoreError }}
                         </p>
 
                         <button
                             type="button"
-                            class="completion-retry inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--daily-play-accent)] bg-[var(--daily-play-accent-soft)] px-4 py-2.5 text-sm font-semibold text-[var(--daily-play-accent-active)] transition hover:bg-[var(--daily-play-accent)] hover:text-[var(--daily-play-text-inverse)]"
+                            class="completion-retry inline-flex w-full items-center justify-center gap-3 rounded-2xl border border-[var(--daily-play-accent)] bg-[var(--daily-play-accent-soft)] px-5 py-4 text-lg font-semibold text-[var(--daily-play-accent-active)] transition hover:bg-[var(--daily-play-accent)] hover:text-[var(--daily-play-text-inverse)]"
                             :disabled="scoreState === 'submitting'"
                             @click="submitScore"
                         >
-                            <FontAwesomeIcon icon="rotate-left" class="text-xs" />
+                            <FontAwesomeIcon icon="rotate-left" class="text-base" />
                             Try again
                         </button>
                     </div>
@@ -593,33 +726,35 @@ onBeforeUnmount(() => {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1.25rem;
-    background: rgb(15 23 42 / 0.4);
+    padding: 1rem;
+    background: rgb(15 23 42 / 0.5);
     overflow-y: auto;
 }
 
 .completion-panel {
     position: relative;
     width: 100%;
-    max-width: 26rem;
-    border-radius: 1.5rem;
+    max-width: 74rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    border-radius: 2.5rem;
     border: 1px solid var(--daily-play-border);
     background: var(--daily-play-surface);
-    padding: 2rem;
-    padding-top: 2.5rem;
+    padding: 4rem;
+    padding-top: 4.5rem;
     text-align: center;
     box-shadow: var(--daily-play-shadow-lg);
 }
 
 .completion-close {
     position: absolute;
-    top: 1rem;
-    right: 1rem;
+    top: 1.25rem;
+    right: 1.25rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 2.25rem;
-    width: 2.25rem;
+    height: 3rem;
+    width: 3rem;
     border-radius: 9999px;
     color: var(--daily-play-text-muted);
     background: transparent;
@@ -639,15 +774,16 @@ onBeforeUnmount(() => {
 }
 
 .completion-home {
-    margin-top: 1.75rem;
+    margin-top: 2.5rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
     width: 100%;
-    border-radius: 0.75rem;
+    border-radius: 1rem;
     border: none;
-    padding: 0.75rem 1rem;
+    padding: 1.25rem 1.5rem;
+    font-size: 1.125rem;
     font-weight: 600;
     color: var(--daily-play-text-inverse);
     background: var(--daily-play-accent);

@@ -4,9 +4,11 @@ export function useGamePlayTimer() {
     let startedAtMs = 0
     let stopped = false
     let ticker = null
+    let pausedElapsedMs = 0
 
     const elapsedSeconds = ref(0)
     const elapsedMs = ref(0)
+    const isPaused = ref(false)
 
     const measure = () => {
         const raw = Math.max(0, performance.now() - startedAtMs)
@@ -15,9 +17,12 @@ export function useGamePlayTimer() {
         elapsedSeconds.value = Math.floor(raw / 1000)
     }
 
-    const start = () => {
-        startedAtMs = performance.now()
+    const start = (offsetMs = 0) => {
+        const offset = Math.max(0, Number.isFinite(offsetMs) ? offsetMs : 0)
+
+        startedAtMs = performance.now() - offset
         stopped = false
+        isPaused.value = false
 
         measure()
         window.clearInterval(ticker)
@@ -29,7 +34,26 @@ export function useGamePlayTimer() {
 
         measure()
         stopped = true
+        isPaused.value = false
         window.clearInterval(ticker)
+    }
+
+    const pause = () => {
+        if (stopped || isPaused.value) return
+
+        measure()
+        isPaused.value = true
+        pausedElapsedMs = elapsedMs.value
+        window.clearInterval(ticker)
+    }
+
+    const resume = () => {
+        if (stopped || !isPaused.value) return
+
+        isPaused.value = false
+        startedAtMs = performance.now() - pausedElapsedMs
+        window.clearInterval(ticker)
+        ticker = window.setInterval(measure, 250)
     }
 
     onBeforeUnmount(() => {
@@ -39,8 +63,11 @@ export function useGamePlayTimer() {
     return {
         elapsedSeconds,
         elapsedMs,
+        isPaused,
         start,
         stop,
+        pause,
+        resume,
     }
 }
 
