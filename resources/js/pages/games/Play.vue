@@ -580,42 +580,42 @@ onBeforeUnmount(() => {
                     </button>
 
                     <div
-                        class="check-badge mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-[var(--daily-play-accent-soft)]"
+                        class="check-badge mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--daily-play-accent-soft)]"
                     >
                         <FontAwesomeIcon
                             icon="circle-check"
-                            class="text-7xl text-[var(--daily-play-accent-active)]"
+                            class="text-3xl text-[var(--daily-play-accent-active)]"
                         />
                     </div>
 
                     <h2
                         id="daily-play-completion-title"
-                        class="mt-7 text-5xl font-bold tracking-tight text-[var(--daily-play-text)] sm:text-6xl"
+                        class="mt-3 text-xl font-bold tracking-tight text-[var(--daily-play-text)] sm:text-2xl"
                     >
                         Puzzle Complete
                     </h2>
 
-                    <div class="mt-10 grid gap-6 sm:grid-cols-2">
+                    <div class="mt-5 grid grid-cols-2 gap-3">
                         <div
-                            class="stat-item rounded-3xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-8 py-7"
+                            class="stat-item rounded-xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-3 py-3"
                         >
-                            <p class="text-base font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
+                            <p class="text-xs font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
                                 Time
                             </p>
                             <p
-                                class="mt-3 font-mono text-5xl font-semibold tabular-nums text-[var(--daily-play-text)] sm:text-6xl"
+                                class="mt-1 font-mono text-2xl font-semibold tabular-nums text-[var(--daily-play-text)]"
                             >
                                 {{ finalSolveTime }}
                             </p>
                         </div>
 
                         <div
-                            class="stat-item rounded-3xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-8 py-7"
+                            class="stat-item rounded-xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-3 py-3"
                         >
-                            <p class="text-base font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
+                            <p class="text-xs font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
                                 Backtracks
                             </p>
-                            <p class="mt-3 text-4xl font-semibold text-[var(--daily-play-text)] sm:text-5xl">
+                            <p class="mt-1 text-lg font-semibold text-[var(--daily-play-text)] sm:text-xl">
                                 {{ solvedBacktrackLabel }}
                             </p>
                         </div>
@@ -623,40 +623,40 @@ onBeforeUnmount(() => {
 
                     <div
                         v-if="scoreState === 'success' && scoreResult"
-                        class="mt-10 flex flex-col items-center justify-center gap-3 rounded-3xl border border-[var(--daily-play-accent)] bg-[var(--daily-play-accent-soft)] px-8 py-7 sm:flex-row sm:gap-6"
+                        class="mt-5 flex flex-col items-center justify-center gap-1.5 rounded-xl border border-[var(--daily-play-accent)] bg-[var(--daily-play-accent-soft)] px-4 py-3 sm:flex-row sm:gap-3"
                     >
-                        <p class="text-lg font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
+                        <p class="text-xs font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
                             Your Rank
                         </p>
-                        <p class="font-mono text-7xl font-bold tabular-nums text-[var(--daily-play-accent-active)]">
+                        <p class="font-mono text-3xl font-bold tabular-nums text-[var(--daily-play-accent-active)] sm:text-4xl">
                             #{{ scoreResult.rank }}
                         </p>
                     </div>
 
                     <div
                         v-if="scoreState === 'success' && scoreResult?.top_rankers?.length"
-                        class="mt-10 rounded-3xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] p-8 text-left"
+                        class="mt-5 rounded-xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] p-4 text-left"
                     >
-                        <p class="mb-5 text-lg font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
+                        <p class="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--daily-play-text-muted)]">
                             Top Rankers
                         </p>
 
-                        <ul class="space-y-4">
+                        <ul class="space-y-2">
                             <li
                                 v-for="(entry, index) in scoreResult.top_rankers"
                                 :key="`${entry.player_id}-${index}`"
-                                class="flex items-center justify-between gap-4 rounded-2xl px-5 py-3.5"
+                                class="flex min-w-0 items-center gap-3 rounded-lg px-3 py-1.5"
                             >
-                                <div class="flex min-w-0 items-center gap-5">
-                                    <span class="w-8 shrink-0 font-mono text-2xl font-bold tabular-nums text-[var(--daily-play-accent-active)]">
-                                        #{{ entry.rank }}
-                                    </span>
-                                    <span class="truncate text-lg font-medium text-[var(--daily-play-text)]">
-                                        {{ entry.player?.name || 'Player' }}
-                                    </span>
-                                </div>
-
-                                <div class="flex shrink-0 items-center gap-5 font-mono text-base tabular-nums text-[var(--daily-play-text-muted)]">
+                                <span class="w-5 shrink-0 font-mono text-sm font-semibold tabular-nums text-[var(--daily-play-accent-active)]">
+                                    #{{ entry.rank }}
+                                </span>
+                                <span
+                                    class="min-w-0 flex-1 truncate text-sm font-medium text-[var(--daily-play-text)]"
+                                    :title="entry.player?.name || 'Player'"
+                                >
+                                    {{ entry.player?.name || 'Player' }}
+                                </span>
+                                <div class="flex shrink-0 items-center gap-3 font-mono text-xs tabular-nums text-[var(--daily-play-text-muted)]">
                                     <span>{{ formatDurationMs(entry.duration_ms) }}</span>
                                     <span>{{ entry.backtracks }} bt</span>
                                 </div>
@@ -666,7 +666,7 @@ onBeforeUnmount(() => {
 
                     <div
                         v-if="scoreState === 'submitting'"
-                        class="mt-10 flex items-center justify-center gap-3 rounded-3xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-8 py-5 text-lg text-[var(--daily-play-text-muted)]"
+                        class="mt-5 flex items-center justify-center gap-2 rounded-xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-4 py-3 text-sm text-[var(--daily-play-text-muted)]"
                     >
                         <FontAwesomeIcon icon="spinner" spin class="text-[var(--daily-play-accent)]" />
                         Submitting your score&hellip;
@@ -674,19 +674,19 @@ onBeforeUnmount(() => {
 
                     <div
                         v-if="scoreState === 'error'"
-                        class="mt-8 space-y-4"
+                        class="mt-4 space-y-2"
                     >
-                        <p class="rounded-2xl bg-[var(--daily-play-background)] px-5 py-4 text-lg font-medium text-[var(--daily-play-danger)]">
+                        <p class="rounded-lg bg-[var(--daily-play-background)] px-3 py-2 text-sm font-medium text-[var(--daily-play-danger)]">
                             {{ scoreError }}
                         </p>
 
                         <button
                             type="button"
-                            class="completion-retry inline-flex w-full items-center justify-center gap-3 rounded-2xl border border-[var(--daily-play-accent)] bg-[var(--daily-play-accent-soft)] px-5 py-4 text-lg font-semibold text-[var(--daily-play-accent-active)] transition hover:bg-[var(--daily-play-accent)] hover:text-[var(--daily-play-text-inverse)]"
+                            class="completion-retry inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--daily-play-accent)] bg-[var(--daily-play-accent-soft)] px-3 py-2 text-sm font-semibold text-[var(--daily-play-accent-active)] transition hover:bg-[var(--daily-play-accent)] hover:text-[var(--daily-play-text-inverse)]"
                             :disabled="scoreState === 'submitting'"
                             @click="submitScore"
                         >
-                            <FontAwesomeIcon icon="rotate-left" class="text-base" />
+                            <FontAwesomeIcon icon="rotate-left" class="text-xs" />
                             Try again
                         </button>
                     </div>
@@ -734,27 +734,27 @@ onBeforeUnmount(() => {
 .completion-panel {
     position: relative;
     width: 100%;
-    max-width: 74rem;
+    max-width: 24rem;
     max-height: calc(100vh - 2rem);
     overflow-y: auto;
-    border-radius: 2.5rem;
+    border-radius: 1.25rem;
     border: 1px solid var(--daily-play-border);
     background: var(--daily-play-surface);
-    padding: 4rem;
-    padding-top: 4.5rem;
+    padding: 1.5rem;
+    padding-top: 2rem;
     text-align: center;
     box-shadow: var(--daily-play-shadow-lg);
 }
 
 .completion-close {
     position: absolute;
-    top: 1.25rem;
-    right: 1.25rem;
+    top: 0.75rem;
+    right: 0.75rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 3rem;
-    width: 3rem;
+    height: 2rem;
+    width: 2rem;
     border-radius: 9999px;
     color: var(--daily-play-text-muted);
     background: transparent;
@@ -774,16 +774,16 @@ onBeforeUnmount(() => {
 }
 
 .completion-home {
-    margin-top: 2.5rem;
+    margin-top: 1.5rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
     width: 100%;
-    border-radius: 1rem;
+    border-radius: 0.75rem;
     border: none;
-    padding: 1.25rem 1.5rem;
-    font-size: 1.125rem;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--daily-play-text-inverse);
     background: var(--daily-play-accent);
