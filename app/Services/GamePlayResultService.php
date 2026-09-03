@@ -8,15 +8,15 @@ use App\Http\Requests\GamePlayResultRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Exception;
-use App\Services\PlayerRankService;
+use App\Services\GamePlayRankerService;
 
-class PlayerScoreService
+class GamePlayResultService
 {
-    protected PlayerRankService $playerRankService;
+    protected GamePlayRankerService $gamePlayRankerService;
 
-    public function __construct(PlayerRankService $playerRankService)
+    public function __construct(GamePlayRankerService $gamePlayRankerService)
     {
-        $this->playerRankService = $playerRankService;
+        $this->gamePlayRankerService = $gamePlayRankerService;
     }
 
     public function save(GamePlayResultRequest $request, GamePlay $gamePlay)
@@ -24,18 +24,18 @@ class PlayerScoreService
         try {
             $playerId = (int) $request->input('player_id');
 
-            $playerScore = DB::transaction(function () use ($request, $gamePlay, $playerId) {
+            $gamePlayResult = DB::transaction(function () use ($request, $gamePlay, $playerId) {
 
-                $playerScore = GamePlayResult::where('game_play_id', $gamePlay->id) ->where('player_id', $playerId)->first();
+                $gamePlayResult = GamePlayResult::where('game_play_id', $gamePlay->id) ->where('player_id', $playerId)->first();
 
-                if (! $playerScore) {
-                    $playerScore = new GamePlayResult();
+                if (! $gamePlayResult) {
+                    $gamePlayResult = new GamePlayResult();
 
-                    $playerScore->game_play_id = $gamePlay->id;
-                    $playerScore->player_id = $playerId;
-                    $playerScore->duration_ms = (int) $request->input('duration_ms');
-                    $playerScore->backtracks = (int) $request->input('backtracks');
-                    $playerScore->device = [
+                    $gamePlayResult->game_play_id = $gamePlay->id;
+                    $gamePlayResult->player_id = $playerId;
+                    $gamePlayResult->duration_ms = (int) $request->input('duration_ms');
+                    $gamePlayResult->backtracks = (int) $request->input('backtracks');
+                    $gamePlayResult->device = [
                         'user_agent' => $request->userAgent(),
                         'ip' => $request->ip(),
                         'accept_language' => $request->header('Accept-Language'),
@@ -44,23 +44,23 @@ class PlayerScoreService
                         'mobile' => $request->header('Sec-CH-UA-Mobile'),
                     ];
 
-                    $playerScore->save();
+                    $gamePlayResult->save();
                 }
 
-                $this->playerRankService->recalculateRanks($gamePlay->id);
+                $this->gamePlayRankerService->recalculateRanks($gamePlay->id);
 
-                return $playerScore;
+                return $gamePlayResult;
             });
 
-            $topRankers = $this->playerRankService->searchTopper($gamePlay->id, 5);
+            $topRankers = $this->gamePlayRankerService->searchTopper($gamePlay->id, 5);
 
             return [
                 'status'  => 'success',
                 'message' => 'Player score successfully saved.',
                 'data'    => [
-                    'score' => $playerScore,
-                    'rank'  => $this->playerRankService->playerRank($gamePlay->id, $playerScore->player_id),
-                    'current_player' => $playerScore->player ?? null,
+                    'score' => $gamePlayResult,
+                    'rank'  => $this->gamePlayRankerService->gamePlayRanker($gamePlay->id, $gamePlayResult->player_id),
+                    'current_player' => $gamePlayResult->player ?? null,
                     'top_rankers' => $topRankers,
                 ],
             ];

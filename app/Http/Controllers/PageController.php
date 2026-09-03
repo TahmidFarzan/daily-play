@@ -13,22 +13,22 @@ use Illuminate\Http\JsonResponse;
 
 use App\Services\GameService;
 use App\Services\PlayerService;
-use App\Services\PlayerScoreService;
+use App\Services\GamePlayResultService;
 use App\Services\GamePlayService;
 
 class PageController extends Controller
 {
     protected GameService $gameService;
     protected PlayerService $playerService;
-    protected PlayerScoreService $playerScoreService;
+    protected GamePlayResultService $gamePlayResultService;
     protected GamePlayService $gamePlayService;
 
 
-    public function __construct( PlayerService $playerService, GameService $gameService, GamePlayService $gamePlayService, PlayerScoreService $playerScoreService,)
+    public function __construct( PlayerService $playerService, GameService $gameService, GamePlayService $gamePlayService, GamePlayResultService $gamePlayResultService,)
     {
         $this->playerService = $playerService;
         $this->gameService = $gameService;
-        $this->playerScoreService = $playerScoreService;
+        $this->gamePlayResultService = $gamePlayResultService;
         $this->gamePlayService = $gamePlayService;
     }
 
@@ -61,12 +61,12 @@ class PageController extends Controller
     }
 
 
-    public function playerScoreSave(GamePlayResultRequest $request, string $slug): JsonResponse
+    public function gamePlayResultSave(GamePlayResultRequest $request, string $slug): JsonResponse
     {
         $game = $this->gameService->findBySlug(CacheHelper::KEY_GAME_DETAILS_PAGE, $slug);
         $gamePlay = $this->gamePlayService->findByGameSlug(CacheHelper::KEY_PLAY_GAME_PAGE, $game);
 
-        $result = $this->playerScoreService->save($request, $gamePlay);
+        $result = $this->gamePlayResultService->save($request, $gamePlay);
 
         return response()->json(
             $result,

@@ -36,7 +36,7 @@ return new class extends Migration
         }
 
         if (Schema::hasTable('player_ranks')) {
-            $this->rebuildPlayerRanksTable();
+            $this->rebuildGamePlayRankersTable();
         }
     }
 
@@ -48,7 +48,7 @@ return new class extends Migration
      * Rebuild the player_ranks table so its game_play_id foreign key points to
      * game_plays.id (instead of a stale player_scores reference).
      */
-    private function rebuildPlayerRanksTable(): void
+    private function rebuildGamePlayRankersTable(): void
     {
         $rankTable = 'player_ranks';
         $scoreColumn = Schema::hasColumn($rankTable, 'game_score_id') ? 'game_score_id' : 'game_play_id';

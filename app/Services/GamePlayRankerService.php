@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\GamePlayResult;
 use App\Models\GamePlayRanker;
 
-class PlayerRankService
+class GamePlayRankerService
 {
     public function recalculateRanks(int $gamePlayId): void
     {
@@ -36,22 +36,22 @@ class PlayerRankService
         }
     }
 
-    public function playerRank(int $gamePlayId, int $playerId): ?int
+    public function gamePlayRanker(int $gamePlayId, int $playerId): ?int
     {
-        $playerScore = GamePlayResult::where('game_play_id', $gamePlayId)
+        $gamePlayResult = GamePlayResult::where('game_play_id', $gamePlayId)
             ->where('player_id', $playerId)
             ->first();
 
-        if (! $playerScore) {
+        if (! $gamePlayResult) {
             return null;
         }
 
         $betterCount = GamePlayResult::where('game_play_id', $gamePlayId)
-            ->where(function ($query) use ($playerScore) {
-                $query->where('duration_ms', '<', $playerScore->duration_ms)
-                    ->orWhere(function ($query) use ($playerScore) {
-                        $query->where('duration_ms', '=', $playerScore->duration_ms)
-                            ->where('backtracks', '<', $playerScore->backtracks);
+            ->where(function ($query) use ($gamePlayResult) {
+                $query->where('duration_ms', '<', $gamePlayResult->duration_ms)
+                    ->orWhere(function ($query) use ($gamePlayResult) {
+                        $query->where('duration_ms', '=', $gamePlayResult->duration_ms)
+                            ->where('backtracks', '<', $gamePlayResult->backtracks);
                     });
             })
             ->count();
