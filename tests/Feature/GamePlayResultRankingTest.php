@@ -184,9 +184,9 @@ class GamePlayResultRankingTest extends TestCase
         $this->assertSame('Player C', $top[2]['player']['name']);
     }
 
-    public function test_player_rank_is_returned_even_when_outside_top_five(): void
+    public function test_player_rank_is_returned_even_when_outside_top_ten(): void
     {
-        foreach (range(1, 6) as $i) {
+        foreach (range(1, 12) as $i) {
             $this->submitScore($this->createPlayer('Slow' . $i), 60000 + $i, 0);
         }
 
@@ -194,7 +194,7 @@ class GamePlayResultRankingTest extends TestCase
         $result = $this->submitScore($fast, 59000, 0);
 
         $this->assertSame(1, $result['data']['rank']);
-        $this->assertCount(5, $result['data']['top_rankers']);
+        $this->assertCount(10, $result['data']['top_rankers']);
     }
 
     public function test_different_day_game_plays_do_not_affect_each_others_ranking(): void
@@ -292,5 +292,48 @@ class GamePlayResultRankingTest extends TestCase
         ])->assertUnprocessable()->assertJsonValidationErrors('duration_ms');
 
         $this->assertSame(0, GamePlayResult::count());
+    }
+
+    public function test_current_player_inside_top_rankers_keeps_natural_position_without_reordering_or_duplication(): void
+    {
+        foreach ([60000, 61000, 62000, 63000, 64000, 65000, 67000, 68000, 69000] as $duration) {
+            $this->submitScore($this->createPlayer(), $duration, 0);
+        }
+
+        $player = $this->createPlayer('Current Player');
+        $result = $this->submitScore($player, 66000, 0);
+
+        $this->assertSame(7, $result['data']['rank']);
+        $this->assertSame($player->id, $result['data']['current_player']['id']);
+        $this->assertSame('Current Player', $result['data']['current_player']['name']);
+
+        $top = $result['data']['top_rankers'];
+        $this->assertCount(10, $top);
+        $this->assertSame([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], array_column($top, 'rank'));
+
+        $currentPlayerInTop = collect($top)->filter(fn ($r) => $r['player_id'] === $player->id);
+        $this->assertCount(1, $currentPlayerInTop, 'Current player must appear exactly once in top_rankers.');
+        $this->assertSame(7, $currentPlayerInTop->first()['rank'], 'Current player must keep its natural position.');
+        $this->assertSame($player->id, $top[6]['player_id'], 'Current player must remain at index 6, not be moved to the top.');
+    }
+
+    public function test_current_player_outside_top_rankers_still_returns_authoritative_rank(): void
+    {
+        foreach (range(1, 25) as $i) {
+            $this->submitScore($this->createPlayer(), 50000 + ($i * 1000), 0);
+        }
+
+        $player = $this->createPlayer('Current Player');
+        $result = $this->submitScore($player, 70500, 0);
+
+        $this->assertSame(21, $result['data']['rank']);
+        $this->assertSame($player->id, $result['data']['current_player']['id']);
+        $this->assertSame('Current Player', $result['data']['current_player']['name']);
+
+        $top = $result['data']['top_rankers'];
+        $this->assertCount(10, $top);
+
+        $currentPlayerInTop = collect($top)->firstWhere('player_id', $player->id);
+        $this->assertNull($currentPlayerInTop, 'A player outside the top 10 must not appear in top_rankers.');
     }
 }

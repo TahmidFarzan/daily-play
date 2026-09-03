@@ -52,7 +52,7 @@ class GamePlayResultService
                 return $gamePlayResult;
             });
 
-            $topRankers = $this->gamePlayRankerService->searchTopper($gamePlay->id, 5);
+            $topRankers = $this->gamePlayRankerService->searchTopper($gamePlay->id, 10);
 
             return [
                 'status'  => 'success',

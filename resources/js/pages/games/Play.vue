@@ -98,6 +98,17 @@ const scoreState = ref('idle')
 const scoreError = ref('')
 const scoreResult = ref(null)
 
+const currentPlayerIdInResult = computed(() => scoreResult.value?.current_player?.id ?? null)
+
+const isCurrentPlayerInTopRankers = computed(() =>
+    Array.isArray(scoreResult.value?.top_rankers)
+        && scoreResult.value.top_rankers.some(
+            (ranker) =>
+                ranker.player_id === currentPlayerIdInResult.value
+                || ranker.player?.id === currentPlayerIdInResult.value,
+        )
+)
+
 let resultTimer = null
 
 const formattedElapsed = computed(() => formatDurationMs(Math.round(elapsedMs.value)))
@@ -635,38 +646,14 @@ onBeforeUnmount(() => {
 
                     <div
                         v-if="scoreState === 'success' && scoreResult"
-                        class="mt-5 rounded-xl border border-[var(--daily-play-accent)] bg-[var(--daily-play-accent-soft)] px-4 py-3 text-left"
+                        class="mt-5 flex items-center justify-center gap-2 rounded-xl border border-[var(--daily-play-accent)] bg-[var(--daily-play-accent-soft)] px-4 py-3 text-left"
                     >
-                        <p class="text-xs font-semibold uppercase tracking-wide text-[var(--daily-play-text-muted)]">
-                            Your Result
-                        </p>
-
-                        <div class="mt-1.5 flex min-w-0 items-center gap-2.5">
-                            <span class="shrink-0 font-mono text-lg font-bold tabular-nums text-[var(--daily-play-accent-active)]">
-                                #{{ scoreResult.rank }}
-                            </span>
-                            <span
-                                class="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--daily-play-text)]"
-                                :title="scoreResult?.current_player?.name || 'Player'"
-                            >
-                                {{ scoreResult?.current_player?.name || 'Player' }}
-                            </span>
-                        </div>
-
-                        <div class="mt-1.5 space-y-0.5 text-xs text-[var(--daily-play-text-muted)]">
-                            <p class="flex items-center gap-1.5">
-                                <span class="font-medium uppercase tracking-wide">Time:</span>
-                                <span class="font-mono font-semibold tabular-nums text-[var(--daily-play-text)]">
-                                    {{ formatHumanDuration(scoreResult?.score?.duration_ms ?? 0) }}
-                                </span>
-                            </p>
-                            <p class="flex items-center gap-1.5">
-                                <span class="font-medium uppercase tracking-wide">Backtracks:</span>
-                                <span class="font-mono font-semibold tabular-nums text-[var(--daily-play-text)]">
-                                    {{ scoreResult?.score?.backtracks ?? backtrackCount.value }}
-                                </span>
-                            </p>
-                        </div>
+                        <span class="text-xs font-semibold uppercase tracking-wide text-[var(--daily-play-text-muted)]">
+                            Your Rank:
+                        </span>
+                        <span class="shrink-0 font-mono text-lg font-bold tabular-nums text-[var(--daily-play-accent-active)]">
+                            #{{ scoreResult.rank }}
+                        </span>
                     </div>
 
                     <div
@@ -693,6 +680,7 @@ onBeforeUnmount(() => {
                                 v-for="(entry, index) in scoreResult.top_rankers"
                                 :key="`${entry.player_id}-${index}`"
                                 class="rounded-lg px-2.5 py-2"
+                                :class="{ 'bg-[var(--daily-play-accent-soft)] ring-1 ring-inset ring-[var(--daily-play-accent)]': entry.player_id === currentPlayerIdInResult }"
                             >
                                 <div class="flex min-w-0 items-center gap-2.5">
                                     <span class="shrink-0 font-mono text-sm font-semibold tabular-nums text-[var(--daily-play-accent-active)]">
@@ -721,6 +709,38 @@ onBeforeUnmount(() => {
                                 </div>
                             </li>
                         </ul>
+                    </div>
+
+                    <div
+                        v-if="scoreState === 'success' && scoreResult && !isCurrentPlayerInTopRankers"
+                        class="mt-5 rounded-xl border border-[var(--daily-play-accent)] bg-[var(--daily-play-accent-soft)] px-4 py-3 text-left"
+                    >
+                        <div class="flex min-w-0 items-center gap-2.5">
+                            <span class="shrink-0 font-mono text-lg font-bold tabular-nums text-[var(--daily-play-accent-active)]">
+                                #{{ scoreResult.rank }}
+                            </span>
+                            <span
+                                class="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--daily-play-text)]"
+                                :title="scoreResult?.current_player?.name || 'Player'"
+                            >
+                                {{ scoreResult?.current_player?.name || 'Player' }}
+                            </span>
+                        </div>
+
+                        <div class="mt-1.5 space-y-0.5 text-xs text-[var(--daily-play-text-muted)]">
+                            <p class="flex items-center gap-1.5">
+                                <span class="font-medium uppercase tracking-wide">Time:</span>
+                                <span class="font-mono font-semibold tabular-nums text-[var(--daily-play-text)]">
+                                    {{ formatHumanDuration(scoreResult?.score?.duration_ms ?? 0) }}
+                                </span>
+                            </p>
+                            <p class="flex items-center gap-1.5">
+                                <span class="font-medium uppercase tracking-wide">Backtracks:</span>
+                                <span class="font-mono font-semibold tabular-nums text-[var(--daily-play-text)]">
+                                    {{ scoreResult?.score?.backtracks ?? backtrackCount.value }}
+                                </span>
+                            </p>
+                        </div>
                     </div>
 
                     <div
