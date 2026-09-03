@@ -24,7 +24,7 @@ class GamePlayResultRequest extends FormRequest
     {
         return [
             'player_id' => ['required', 'integer', 'exists:players,id'],
-            'duration_ms' => ['required', 'integer', 'min:0'],
+            'duration_ms' => ['required', 'integer', 'min:0', 'max:86399999'],
             'backtracks' => ['required', 'integer', 'min:0'],
         ];
     }
@@ -39,6 +39,7 @@ class GamePlayResultRequest extends FormRequest
             'duration_ms.required' => 'Game duration is required.',
             'duration_ms.integer' => 'Game duration must be a valid integer.',
             'duration_ms.min' => 'Game duration cannot be negative.',
+            'duration_ms.max' => 'Game duration cannot be 24 hours or more.',
 
             'backtracks.required' => 'Backtracks count is required.',
             'backtracks.integer' => 'Backtracks must be a valid integer.',

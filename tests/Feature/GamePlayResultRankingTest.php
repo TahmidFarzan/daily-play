@@ -234,4 +234,63 @@ class GamePlayResultRankingTest extends TestCase
         $this->assertSame(1, $score->backtracks);
         $this->assertNotNull($score->device);
     }
+
+    public function test_duration_ms_zero_is_accepted(): void
+    {
+        $player = $this->createPlayer();
+
+        $result = $this->submitScore($player, 0, 0);
+
+        $this->assertSame('success', $result['status']);
+        $this->assertSame(0, GamePlayResult::firstOrFail()->duration_ms);
+    }
+
+    public function test_duration_ms_max_boundary_is_accepted(): void
+    {
+        $player = $this->createPlayer();
+
+        $result = $this->submitScore($player, 86399999, 0);
+
+        $this->assertSame('success', $result['status']);
+        $this->assertSame(86399999, GamePlayResult::firstOrFail()->duration_ms);
+    }
+
+    public function test_duration_ms_negative_is_rejected(): void
+    {
+        $player = $this->createPlayer();
+
+        $this->postJson(route('games.score.save', ['slug' => $this->game->slug]), [
+            'player_id' => $player->id,
+            'duration_ms' => -1,
+            'backtracks' => 0,
+        ])->assertUnprocessable()->assertJsonValidationErrors('duration_ms');
+
+        $this->assertSame(0, GamePlayResult::count());
+    }
+
+    public function test_duration_ms_twenty_four_hours_is_rejected(): void
+    {
+        $player = $this->createPlayer();
+
+        $this->postJson(route('games.score.save', ['slug' => $this->game->slug]), [
+            'player_id' => $player->id,
+            'duration_ms' => 86400000,
+            'backtracks' => 0,
+        ])->assertUnprocessable()->assertJsonValidationErrors('duration_ms');
+
+        $this->assertSame(0, GamePlayResult::count());
+    }
+
+    public function test_duration_ms_must_be_an_integer(): void
+    {
+        $player = $this->createPlayer();
+
+        $this->postJson(route('games.score.save', ['slug' => $this->game->slug]), [
+            'player_id' => $player->id,
+            'duration_ms' => 10123.5,
+            'backtracks' => 0,
+        ])->assertUnprocessable()->assertJsonValidationErrors('duration_ms');
+
+        $this->assertSame(0, GamePlayResult::count());
+    }
 }

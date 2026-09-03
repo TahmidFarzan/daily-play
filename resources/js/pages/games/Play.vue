@@ -5,7 +5,7 @@ import GameBoard from '@/components/games/GameBoard.vue'
 import MediaRenderer from '@/components/common/media/MediaRenderer.vue'
 import PlayerModal from '@/components/players/PlayerModal.vue'
 import { formatDate, formatTime } from '@/composables/useDateTime'
-import { formatDurationMs, formatSolveDuration, useGamePlayTimer } from '@/composables/useGamePlayTimer'
+import { formatDurationMs, formatHumanDuration, isValidGameplayDurationMs, MAX_GAMEPLAY_DURATION_MS, useGamePlayTimer } from '@/composables/useGamePlayTimer'
 import { progressionColor, softTintColor } from '@/composables/progressColors'
 import {
     getPlayerCache,
@@ -100,7 +100,7 @@ const scoreResult = ref(null)
 
 let resultTimer = null
 
-const formattedElapsed = computed(() => formatSolveDuration(elapsedSeconds.value))
+const formattedElapsed = computed(() => formatDurationMs(Math.round(elapsedMs.value)))
 
 const backtrackStyle = computed(() => ({
     color: progressionColor(backtrackCount.value),
@@ -299,7 +299,7 @@ const handleSolved = (payload) => {
     window.clearInterval(persistenceTimer)
     clearPersistence()
 
-    finalSolveTime.value = formatDurationMs(elapsedMs.value)
+    finalSolveTime.value = formatHumanDuration(elapsedMs.value)
     backtrackCount.value = payload?.backtrackCount ?? backtrackCount.value
 
     submitScore()
@@ -310,8 +310,18 @@ const handleSolved = (payload) => {
     }, 700)
 }
 
+const finalDurationMs = computed(() => Math.round(elapsedMs.value))
+
 const submitScore = async () => {
     if (scoreState.value === 'submitting' || scoreState.value === 'success') return
+
+    const durationMs = finalDurationMs.value
+
+    if (!isValidGameplayDurationMs(durationMs)) {
+        scoreState.value = 'error'
+        scoreError.value = `Your completion time is invalid (${formatDurationMs(durationMs)} > ${formatDurationMs(MAX_GAMEPLAY_DURATION_MS)}). Please finish the puzzle in under 24 hours and try again.`
+        return
+    }
 
     scoreState.value = 'submitting'
     scoreError.value = ''
@@ -323,7 +333,7 @@ const submitScore = async () => {
             slug: targetSlug,
         }), {
             player_id: currentPlayer.value?.id,
-            duration_ms: Math.round(elapsedMs.value),
+            duration_ms: durationMs,
             backtracks: backtrackCount.value,
         })
 
@@ -595,28 +605,30 @@ onBeforeUnmount(() => {
                         Puzzle Complete
                     </h2>
 
-                    <div class="mt-5 grid grid-cols-2 gap-3">
+                    <div class="mt-5 space-y-3">
                         <div
                             class="stat-item rounded-xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-3 py-3"
                         >
-                            <p class="text-xs font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-[var(--daily-play-text-muted)]">
                                 Time
                             </p>
                             <p
-                                class="mt-1 font-mono text-2xl font-semibold tabular-nums text-[var(--daily-play-text)]"
+                                class="mt-1 font-mono text-xl font-semibold tabular-nums text-[var(--daily-play-text)] sm:text-2xl"
                             >
                                 {{ finalSolveTime }}
                             </p>
                         </div>
 
                         <div
-                            class="stat-item rounded-xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-3 py-3"
+                            class="stat-item rounded-xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-3 py-2"
                         >
-                            <p class="text-xs font-medium uppercase tracking-wide text-[var(--daily-play-text-muted)]">
-                                Backtracks
-                            </p>
-                            <p class="mt-1 text-lg font-semibold text-[var(--daily-play-text)] sm:text-xl">
-                                {{ solvedBacktrackLabel }}
+                            <p class="flex items-center justify-center gap-2 text-sm text-[var(--daily-play-text)]">
+                                <span class="text-xs font-semibold uppercase tracking-wide text-[var(--daily-play-text-muted)]">
+                                    Backtracks
+                                </span>
+                                <span class="font-mono text-base font-semibold tabular-nums">
+                                    {{ solvedBacktrackLabel }}
+                                </span>
                             </p>
                         </div>
                     </div>
@@ -635,30 +647,53 @@ onBeforeUnmount(() => {
 
                     <div
                         v-if="scoreState === 'success' && scoreResult?.top_rankers?.length"
-                        class="mt-5 rounded-xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] p-4 text-left"
+                        class="mt-5 rounded-xl border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] p-3 text-left sm:p-4"
                     >
-                        <p class="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--daily-play-text-muted)]">
-                            Top Rankers
-                        </p>
+                        <div class="mb-2.5 flex items-center justify-between gap-2 px-1">
+                            <p class="text-sm font-semibold uppercase tracking-wide text-[var(--daily-play-text-muted)]">
+                                Top Rankers
+                            </p>
+                            <p
+                                v-if="scoreResult.top_rankers.length > 3"
+                                class="text-xs text-[var(--daily-play-text-muted)]"
+                            >
+                                Scroll for more
+                            </p>
+                        </div>
 
-                        <ul class="space-y-2">
+                        <ul
+                            class="space-y-2"
+                            :class="{ 'top-rankers-scroll': scoreResult.top_rankers.length > 3 }"
+                        >
                             <li
                                 v-for="(entry, index) in scoreResult.top_rankers"
                                 :key="`${entry.player_id}-${index}`"
-                                class="flex min-w-0 items-center gap-3 rounded-lg px-3 py-1.5"
+                                class="rounded-lg px-2.5 py-2"
                             >
-                                <span class="w-5 shrink-0 font-mono text-sm font-semibold tabular-nums text-[var(--daily-play-accent-active)]">
-                                    #{{ entry.rank }}
-                                </span>
-                                <span
-                                    class="min-w-0 flex-1 truncate text-sm font-medium text-[var(--daily-play-text)]"
-                                    :title="entry.player?.name || 'Player'"
-                                >
-                                    {{ entry.player?.name || 'Player' }}
-                                </span>
-                                <div class="flex shrink-0 items-center gap-3 font-mono text-xs tabular-nums text-[var(--daily-play-text-muted)]">
-                                    <span>{{ formatDurationMs(entry.duration_ms) }}</span>
-                                    <span>{{ entry.backtracks }} bt</span>
+                                <div class="flex min-w-0 items-center gap-2.5">
+                                    <span class="shrink-0 font-mono text-sm font-semibold tabular-nums text-[var(--daily-play-accent-active)]">
+                                        #{{ entry.rank }}
+                                    </span>
+                                    <span
+                                        class="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--daily-play-text)]"
+                                        :title="entry.player?.name || 'Player'"
+                                    >
+                                        {{ entry.player?.name || 'Player' }}
+                                    </span>
+                                </div>
+                                <div class="mt-1 space-y-0.5 pl-6 text-xs text-[var(--daily-play-text-muted)]">
+                                    <p class="flex items-center gap-1.5">
+                                        <span class="font-medium uppercase tracking-wide">Time:</span>
+                                        <span class="font-mono font-semibold tabular-nums text-[var(--daily-play-text)]">
+                                            {{ formatHumanDuration(entry.duration_ms) }}
+                                        </span>
+                                    </p>
+                                    <p class="flex items-center gap-1.5">
+                                        <span class="font-medium uppercase tracking-wide">Backtracks:</span>
+                                        <span class="font-mono font-semibold tabular-nums text-[var(--daily-play-text)]">
+                                            {{ entry.backtracks }}
+                                        </span>
+                                    </p>
                                 </div>
                             </li>
                         </ul>
@@ -717,6 +752,26 @@ onBeforeUnmount(() => {
 
 .stat-item:nth-child(2) {
     animation: stat-in 0.4s ease-out 0.55s both;
+}
+
+.top-rankers-scroll {
+    max-height: 15rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.25rem;
+}
+
+.top-rankers-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.top-rankers-scroll::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: var(--daily-play-border);
+}
+
+.top-rankers-scroll::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 .completion-overlay {
