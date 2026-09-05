@@ -4,7 +4,7 @@ import Layout from '@/pages/layouts/PublicLayout.vue'
 import GameBoard from '@/components/games/GameBoard.vue'
 import MediaRenderer from '@/components/common/media/MediaRenderer.vue'
 import PlayerModal from '@/components/players/PlayerModal.vue'
-import { formatDate, formatTime , formatDateTime} from '@/composables/useDateTime'
+import { formatDate, formatTime} from '@/composables/useDateTime'
 import { formatDurationMs, formatHumanDuration, isValidGameplayDurationMs, MAX_GAMEPLAY_DURATION_MS, useGamePlayTimer } from '@/composables/useGamePlayTimer'
 import { progressionColor, softTintColor } from '@/composables/progressColors'
 import {
@@ -50,7 +50,7 @@ const board = computed(() => gamePlay?.board ?? {})
 const difficulty = computed(() => gamePlay?.game_difficulty ?? null)
 
 const dailyDateLabel = computed(() =>
-    formatDateTime(gamePlay.start_at) + " - " + formatDateTime(gamePlay.end_at),
+    formatDate(gamePlay?.date)+ " from "+ formatTime(gamePlay?.start_time) + " to " + formatTime(gamePlay?.end_time)
 )
 
 const {

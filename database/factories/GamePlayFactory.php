@@ -5,8 +5,8 @@ namespace Database\Factories;
 use App\Models\Game;
 use App\Models\GameDifficulty;
 use App\Models\GamePlay;
-use Carbon\Carbon;
 use App\Services\GamePlay\ZipBoardGenerator;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,33 +18,33 @@ class GamePlayFactory extends Factory
 
     public function definition(): array
     {
-        $startAt = Carbon::instance(fake()->dateTimeBetween('today', '+1 year'));
-        $endAt = $startAt->copy()->addHours(24);
+        $date = Carbon::instance(fake()->dateTimeBetween('today', '+1 year'));
 
         $board = [];
         $game = Game::query()->inRandomOrder()->first();
         $gameDifficulty = GameDifficulty::query()->inRandomOrder()->first();
 
         switch ($game->slug) {
-                    case 'zip':
-                        $board = app(ZipBoardGenerator::class)->generate(
-                            $game,
-                            $startAt,
-                            $gameDifficulty
-                        );
-                        break;
+            case 'zip':
+                $board = app(ZipBoardGenerator::class)->generate(
+                    $game,
+                    $date,
+                    $gameDifficulty
+                );
+                break;
 
-                    default:
-                        $board = [];
-                        break;
-                }
+            default:
+                $board = [];
+                break;
+        }
 
         return [
-            'game_id'            => $game?->id,
+            'game_id' => $game?->id,
             'game_difficulty_id' => $gameDifficulty?->id,
-            'board'              => $board,
-            'start_at'           => $startAt,
-            'end_at'             => $endAt,
+            'board' => $board,
+            'date' => $date->toDateString(),
+            'start_time' => '00:00:00',
+            'end_time' => '23:59:59',
         ];
     }
 }

@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\GamePlay;
 use App\Models\Game;
+use App\Models\GamePlay;
 use App\Models\User;
 use Database\Seeders\GameDifficultySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -56,8 +56,9 @@ class PlayPageTest extends TestCase
             ->has('gamePlay', fn (Assert $gamePlayAssert) => $gamePlayAssert
                 ->where('id', $gamePlay->id)
                 ->has('slug')
-                ->where('start_at', $gamePlay->start_at->toISOString())
-                ->where('end_at', $gamePlay->end_at->toISOString())
+                ->where('date', $gamePlay->date->format('Y-m-d'))
+                ->where('start_time', $gamePlay->start_time->format('H:i:s'))
+                ->where('end_time', $gamePlay->end_time->format('H:i:s'))
                 ->has('board', fn (Assert $boardAssert) => $boardAssert
                     ->where('rows', $gamePlay->board['rows'])
                     ->where('cols', $gamePlay->board['cols'])

@@ -13,7 +13,7 @@ use Spatie\Sluggable\HasSlug;
 use Spatie\Sluggable\SlugOptions;
 
 #[Table('game_plays')]
-#[Fillable(['game_id', 'game_difficulty_id', 'start_at', 'end_at', 'board'])]
+#[Fillable(['game_id', 'game_difficulty_id', 'date', 'start_time', 'end_time', 'board'])]
 class GamePlay extends Model
 {
     use HasFactory, HasSlug;
@@ -22,8 +22,9 @@ class GamePlay extends Model
     {
         return [
             'board' => 'array',
-            'start_at' => 'datetime',
-            'end_at' => 'datetime',
+            'date' => 'date:Y-m-d',
+            'start_time' => 'datetime:H:i:s',
+            'end_time' => 'datetime:H:i:s',
         ];
     }
 

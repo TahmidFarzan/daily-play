@@ -7,17 +7,14 @@ const storageKeyFor = (gamePlayId, playerId) =>
     `${STORAGE_NAMESPACE}_${gamePlayId}_${playerId}`
 
 const expiresAtOf = (gamePlay) => {
-    for (const field of ['end_at', 'endAt']) {
-        const value = gamePlay?.[field]
+    const date = gamePlay?.date
+    const endTime = gamePlay?.end_time
 
-        if (value) {
-            const time = new Date(value).getTime()
+    if (!date || !endTime) return null
 
-            if (Number.isFinite(time)) return time
-        }
-    }
+    const time = new Date(`${date}T${endTime}`).getTime()
 
-    return null
+    return Number.isFinite(time) ? time : null
 }
 
 const readRaw = (key) => {

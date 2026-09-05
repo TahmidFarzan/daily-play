@@ -54,7 +54,8 @@ class GamePlaySeeder extends Seeder
         }
 
         $startDate = Carbon::today();
-        $endDate = Carbon::today()->addYear();
+        $endDate = Carbon::today()->addDay();
+        // $endDate = Carbon::today()->addYear();
 
         foreach ($games as $game) {
             for (
@@ -64,14 +65,11 @@ class GamePlaySeeder extends Seeder
             ) {
                 $difficulty = $difficulties->random();
 
-                $startAt = $gameDate->copy();
-                $endAt = $startAt->copy()->addHours(24);
-
                 switch ($game->slug) {
                     case 'zip':
                         $board = app(ZipBoardGenerator::class)->generate(
                             $game,
-                            $startAt,
+                            $gameDate,
                             $difficulty
                         );
                         break;
@@ -83,11 +81,12 @@ class GamePlaySeeder extends Seeder
 
                 $gamePlay = GamePlay::factory()
                     ->state([
-                        'game_id'            => $game->id,
+                        'game_id' => $game->id,
                         'game_difficulty_id' => $difficulty->id,
-                        'board'              => $board,
-                        'start_at'           => $startAt,
-                        'end_at'             => $endAt,
+                        'board' => $board,
+                        'date' => $gameDate->toDateString(),
+                        'start_time' => '00:00:00',
+                        'end_time' => '23:59:59',
                     ])
                     ->create();
 
@@ -99,7 +98,7 @@ class GamePlaySeeder extends Seeder
                     GamePlayResult::factory()
                         ->state([
                             'game_play_id' => $gamePlay->id,
-                            'player_id'    => $player->id,
+                            'player_id' => $player->id,
                         ])
                         ->create();
                 }
@@ -120,8 +119,8 @@ class GamePlaySeeder extends Seeder
                     GamePlayRanker::factory()
                         ->state([
                             'game_play_id' => $gamePlay->id,
-                            'player_id'    => $result->player_id,
-                            'rank'         => $index + 1,
+                            'player_id' => $result->player_id,
+                            'rank' => $index + 1,
                         ])
                         ->create();
                 }

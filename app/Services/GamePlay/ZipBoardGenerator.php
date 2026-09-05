@@ -22,7 +22,7 @@ class ZipBoardGenerator
 
     protected const GENERATION_ATTEMPTS = 64;
 
-    public function generate(Game $game, CarbonInterface $startAt, ?GameDifficulty $gameDifficulty = null): array
+    public function generate(Game $game, CarbonInterface $datetime, ?GameDifficulty $gameDifficulty = null): array
     {
         $settings = $this->settingsFor($gameDifficulty);
 

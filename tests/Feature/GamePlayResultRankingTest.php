@@ -38,7 +38,7 @@ class GamePlayResultRankingTest extends TestCase
         $this->game = Game::factory()->state(['name' => 'Zip'])->create();
 
         $service = app(GamePlayCacheService::class);
-        $gamePlay = $service->getRecordByGame(
+        $gamePlay = $service->getRecordByGameAndDatetime(
             CacheHelper::KEY_PLAY_GAME_PAGE,
             $this->game,
             now(),
@@ -187,7 +187,7 @@ class GamePlayResultRankingTest extends TestCase
     public function test_player_rank_is_returned_even_when_outside_top_ten(): void
     {
         foreach (range(1, 12) as $i) {
-            $this->submitScore($this->createPlayer('Slow' . $i), 60000 + $i, 0);
+            $this->submitScore($this->createPlayer('Slow'.$i), 60000 + $i, 0);
         }
 
         $fast = $this->createPlayer('Fast');
@@ -204,7 +204,7 @@ class GamePlayResultRankingTest extends TestCase
         $this->travelTo(Carbon::parse('2026-09-02 10:00:00'));
 
         $service = app(GamePlayCacheService::class);
-        $dayTwo = $service->getRecordByGame(
+        $dayTwo = $service->getRecordByGameAndDatetime(
             CacheHelper::KEY_PLAY_GAME_PAGE,
             $this->game,
             now(),

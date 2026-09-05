@@ -4,20 +4,21 @@ namespace App\Services\Cache;
 
 use App\Helpers\CacheHelper;
 use App\Helpers\CacheServerHelper;
-use App\Models\GamePlay;
 use App\Models\Game;
 use App\Models\GameDifficulty;
+use App\Models\GamePlay;
 use App\Services\GamePlay\ZipBoardGenerator;
 use Carbon\CarbonInterface;
+use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
-use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 class GamePlayCacheService
 {
-    private int $perPage   = 5000;
+    private int $perPage = 5000;
+
     private int $cachedTTL = 86400;
 
     private string $mainTag = CacheHelper::TAG_GAME_PLAY;
@@ -70,7 +71,7 @@ class GamePlayCacheService
         return $record;
     }
 
-    public function searchRecordsByGame(string $key, Game $game, Request $request, int | null $perPage = null, ?int $cachedTTL = null): LengthAwarePaginator
+    public function searchRecordsByGame(string $key, Game $game, Request $request, ?int $perPage = null, ?int $cachedTTL = null): LengthAwarePaginator
     {
         $perPage = $perPage ?? $this->perPage;
         $cacheKey = CacheHelper::cacheKeyGenerateGamePlayRecordsByGame($key, $this->secondKey, $game, $request, $perPage);
@@ -86,7 +87,6 @@ class GamePlayCacheService
         if (! $records) {
             $records = $this->dbRecordsByGame($game, $request, $perPage);
 
-
             CacheServerHelper::cachedData(
                 $cacheKey,
                 $records,
@@ -101,12 +101,12 @@ class GamePlayCacheService
         return $records;
     }
 
-    private function getPerPage(int | null $perPage = null): int
+    private function getPerPage(?int $perPage = null): int
     {
         return $perPage ?? $this->perPage;
     }
 
-    private function dbRecordsByGame(Game $game, Request $request, int | null $perPage = null ): LengthAwarePaginator
+    private function dbRecordsByGame(Game $game, Request $request, ?int $perPage = null): LengthAwarePaginator
     {
         $request ??= request();
 
@@ -115,29 +115,44 @@ class GamePlayCacheService
         if ($request->filled('date')) {
             $date = $request->input('date');
             $date = is_string($date) ? new \DateTime($date) : $date;
-            $query->whereDate('start_at', '<=', $date);
+            $query->whereDate('date', '<=', $date);
         }
 
-        return $query->orderByDesc('id')->paginate($this->getPerPage($request->input("per_page", $perPage)))->appends($request->all());
+        return $query->orderByDesc('id')->paginate($this->getPerPage($request->input('per_page', $perPage)))->appends($request->all());
     }
 
     private function dbRecordByGameAndDatetime(Game $game, CarbonInterface $datetime, bool $orFail = false): ?GamePlay
     {
+        $date = $datetime->toDateString();
+        $time = $datetime->format('H:i:s');
+
         $query = GamePlay::query()
             ->with(['game', 'game.logo', 'gameDifficulty'])
             ->where('game_id', $game->id)
-            ->where('start_at', '<=', $datetime)
-            ->where('end_at', '>=', $datetime);
+            ->where(function ($query) use ($date, $time) {
+                $query->whereDate('date', '<', $date)
+                    ->orWhere(function ($query) use ($date, $time) {
+                        $query->whereDate('date', '=', $date)
+                            ->where('start_time', '<=', $time);
+                    });
+            })
+            ->where(function ($query) use ($date, $time) {
+                $query->whereDate('date', '>', $date)
+                    ->orWhere(function ($query) use ($date, $time) {
+                        $query->whereDate('date', '=', $date)
+                            ->where('end_time', '>=', $time);
+                    });
+            });
 
         return $orFail ? $query->firstOrFail() : $query->first();
     }
 
-    private function dbRecordCreate(Game $game, ?CarbonInterface $startAt = null): GamePlay
+    private function dbRecordCreate(Game $game, ?CarbonInterface $datetime = null): GamePlay
     {
-        $startAt = ($startAt ?? now())->copy();
-        $endAt = $startAt->copy()->addHours(24);
+        $datetime = ($datetime ?? now())->copy();
+        $date = $datetime->toDateString();
 
-        $existing = $this->dbRecordByGameAndDatetime($game, $startAt);
+        $existing = $this->dbRecordByGameAndDatetime($game, $datetime);
 
         if ($existing) {
             return $existing;
@@ -145,8 +160,8 @@ class GamePlayCacheService
 
         $difficulty = GameDifficulty::query()->inRandomOrder()->first() ?? null;
         try {
-            DB::transaction(function () use ($game, $startAt, $endAt, $difficulty): void {
-                if ($this->dbRecordByGameAndDatetime($game, $startAt)) {
+            DB::transaction(function () use ($game, $datetime, $date, $difficulty): void {
+                if ($this->dbRecordByGameAndDatetime($game, $datetime)) {
                     return;
                 }
 
@@ -154,7 +169,7 @@ class GamePlayCacheService
 
                 switch ($game->slug) {
                     case 'zip':
-                        $board = app(ZipBoardGenerator::class)->generate($game, $startAt, $difficulty);
+                        $board = app(ZipBoardGenerator::class)->generate($game, $datetime, $difficulty);
                         break;
 
                     default:
@@ -166,8 +181,9 @@ class GamePlayCacheService
                     'game_id' => $game->id,
                     'game_difficulty_id' => $difficulty->id ?? null,
                     'board' => $board,
-                    'start_at' => $startAt,
-                    'end_at' => $endAt,
+                    'date' => $date,
+                    'start_time' => $datetime->copy()->startOfDay()->format('H:i:s'),
+                    'end_time' => $datetime->copy()->endOfDay()->format('H:i:s'),
                 ]);
             });
         } catch (Throwable $exception) {
@@ -176,6 +192,6 @@ class GamePlayCacheService
             ]);
         }
 
-        return $this->dbRecordByGameAndDatetime($game, $startAt, orFail: true);
+        return $this->dbRecordByGameAndDatetime($game, $datetime, orFail: true);
     }
 }

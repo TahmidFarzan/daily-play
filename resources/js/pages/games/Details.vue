@@ -16,7 +16,7 @@ import {
     faSpinner,
 } from "@fortawesome/free-solid-svg-icons";
 
-import { formatDateTime } from "@/composables/useDateTime";
+import { formatDate, formatTime } from "@/composables/useDateTime";
 import { itemListFilterParameters } from "@/composables/useDataTable";
 
 FontAwesomeLibrary.add(
@@ -230,6 +230,7 @@ onMounted(() => {
                         >
                             <th class="px-4 py-3">Sl</th>
                             <th class="px-4 py-3">Diffculty</th>
+                            <th class="px-4 py-3">Date</th>
                             <th class="px-4 py-3">Start Time</th>
                             <th class="px-4 py-3">End Time</th>
                             <th class="px-4 py-3 text-right">Action</th>
@@ -253,10 +254,13 @@ onMounted(() => {
                                 {{ item.game_difficulty?.name || "N/A" }}
                             </td>
                             <td class="px-4 py-3 text-[var(--daily-play-text)]">
-                                {{ formatDateTime(item.start_at) }}
+                                {{ formatDate(item.date) }}
                             </td>
                             <td class="px-4 py-3 text-[var(--daily-play-text)]">
-                                {{ formatDateTime(item.end_at) }}
+                                {{ formatTime(item.start_time) }}
+                            </td>
+                            <td class="px-4 py-3 text-[var(--daily-play-text)]">
+                                {{ formatTime(item.end_time) }}
                             </td>
                             <td class="px-4 py-3 text-right">
                                 <span

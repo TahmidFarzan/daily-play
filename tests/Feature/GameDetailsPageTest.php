@@ -8,7 +8,6 @@ use App\Models\GamePlay;
 use App\Models\User;
 use Database\Seeders\GameDifficultySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -36,14 +35,13 @@ class GameDetailsPageTest extends TestCase
 
     protected function createGamePlay(Game $game, string $date): void
     {
-        $startAt = Carbon::parse($date);
-
         GamePlay::create([
             'game_id' => $game->id,
             'game_difficulty_id' => GameDifficulty::query()->value('id'),
             'board' => [],
-            'start_at' => $startAt,
-            'end_at' => $startAt->copy()->addHours(24),
+            'date' => $date,
+            'start_time' => '00:00:00',
+            'end_time' => '23:59:59',
         ]);
     }
 
@@ -67,8 +65,9 @@ class GameDetailsPageTest extends TestCase
             ->where('gamePlays.per_page', 5000)
             ->has('gamePlays.data.0')
             ->has('gamePlays.data.0.id')
-            ->has('gamePlays.data.0.start_at')
-            ->has('gamePlays.data.0.end_at')
+            ->has('gamePlays.data.0.date')
+            ->has('gamePlays.data.0.start_time')
+            ->has('gamePlays.data.0.end_time')
         );
     }
 
