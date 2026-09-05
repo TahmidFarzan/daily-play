@@ -38,7 +38,7 @@ class GamePlayResultRankingTest extends TestCase
         $this->game = Game::factory()->state(['name' => 'Zip'])->create();
 
         $service = app(GamePlayCacheService::class);
-        $gamePlay = $service->getRecordByGameAndDate(
+        $gamePlay = $service->getRecordByGame(
             CacheHelper::KEY_PLAY_GAME_PAGE,
             $this->game,
             now(),
@@ -197,14 +197,14 @@ class GamePlayResultRankingTest extends TestCase
         $this->assertCount(10, $result['data']['top_rankers']);
     }
 
-    public function test_different_day_game_plays_do_not_affect_each_others_ranking(): void
+    public function test_different_game_play_periods_do_not_affect_each_others_ranking(): void
     {
         $this->submitScore($this->createPlayer(), 50000, 0);
 
-        $this->travelTo(Carbon::parse('2026-09-02 09:00:00'));
+        $this->travelTo(Carbon::parse('2026-09-02 10:00:00'));
 
         $service = app(GamePlayCacheService::class);
-        $dayTwo = $service->getRecordByGameAndDate(
+        $dayTwo = $service->getRecordByGame(
             CacheHelper::KEY_PLAY_GAME_PAGE,
             $this->game,
             now(),
@@ -220,6 +220,7 @@ class GamePlayResultRankingTest extends TestCase
 
         $this->assertSame(1, $result['data']['rank']);
         $this->assertSame(1, GamePlayResult::where('game_play_id', $dayTwo->id)->count());
+        $this->assertNotSame($this->gamePlayId, $dayTwo->id);
     }
 
     public function test_score_requires_valid_device_fields_from_request(): void

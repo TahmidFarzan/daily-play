@@ -80,9 +80,6 @@ const serialNumber = (index) => {
     return from > 0 ? from + index : index + 1;
 };
 
-const formatDate = (value) => (value ? formatDateTime(value, "d-M-Y") : "—");
-const formatClock = (value) => (value ? formatDateTime(value, "h:mm a") : "—");
-
 onMounted(() => {
     const urlParams = new URLSearchParams(window.location.search);
 
@@ -232,7 +229,6 @@ onMounted(() => {
                             class="border-b border-[var(--daily-play-border)] text-left text-xs font-semibold uppercase tracking-wide text-[var(--daily-play-text-muted)]"
                         >
                             <th class="px-4 py-3">Sl</th>
-                            <th class="px-4 py-3">Date</th>
                             <th class="px-4 py-3">Diffculty</th>
                             <th class="px-4 py-3">Start Time</th>
                             <th class="px-4 py-3">End Time</th>
@@ -254,18 +250,13 @@ onMounted(() => {
                             <td
                                 class="px-4 py-3 font-medium text-[var(--daily-play-text)]"
                             >
-                                {{ formatDate(item.game_date) }}
-                            </td>
-                            <td
-                                class="px-4 py-3 font-medium text-[var(--daily-play-text)]"
-                            >
                                 {{ item.game_difficulty?.name || "N/A" }}
                             </td>
                             <td class="px-4 py-3 text-[var(--daily-play-text)]">
-                                {{ formatClock(item.starts_at) }}
+                                {{ formatDateTime(item.start_at) }}
                             </td>
                             <td class="px-4 py-3 text-[var(--daily-play-text)]">
-                                {{ formatClock(item.ends_at) }}
+                                {{ formatDateTime(item.end_at) }}
                             </td>
                             <td class="px-4 py-3 text-right">
                                 <span

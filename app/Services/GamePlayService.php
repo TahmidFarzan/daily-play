@@ -21,7 +21,7 @@ class GamePlayService
 
     public function findByGame(string $pageKey, Game $game): GamePlay
     {
-        return $this->gamePlayCacheService->getRecordByGameAndDate($pageKey, $game, now(), $this->cachedTTL);
+        return $this->gamePlayCacheService->getRecordByGameAndDatetime($pageKey, $game, now(), $this->cachedTTL);
     }
 
     public function searchByGame(Request $request, string $pageKey, Game $game): LengthAwarePaginator

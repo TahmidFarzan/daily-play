@@ -64,11 +64,14 @@ class GamePlaySeeder extends Seeder
             ) {
                 $difficulty = $difficulties->random();
 
+                $startAt = $gameDate->copy();
+                $endAt = $startAt->copy()->addHours(24);
+
                 switch ($game->slug) {
                     case 'zip':
                         $board = app(ZipBoardGenerator::class)->generate(
                             $game,
-                            $gameDate,
+                            $startAt,
                             $difficulty
                         );
                         break;
@@ -82,10 +85,9 @@ class GamePlaySeeder extends Seeder
                     ->state([
                         'game_id'            => $game->id,
                         'game_difficulty_id' => $difficulty->id,
-                        'game_date'          => $gameDate->toDateString(),
                         'board'              => $board,
-                        'starts_at'          => $gameDate->copy()->startOfDay(),
-                        'ends_at'            => $gameDate->copy()->endOfDay(),
+                        'start_at'           => $startAt,
+                        'end_at'             => $endAt,
                     ])
                     ->create();
 

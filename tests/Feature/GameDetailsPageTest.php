@@ -36,15 +36,14 @@ class GameDetailsPageTest extends TestCase
 
     protected function createGamePlay(Game $game, string $date): void
     {
-        $gameDate = Carbon::parse($date);
+        $startAt = Carbon::parse($date);
 
         GamePlay::create([
             'game_id' => $game->id,
             'game_difficulty_id' => GameDifficulty::query()->value('id'),
-            'game_date' => $gameDate->toDateString(),
             'board' => [],
-            'starts_at' => $gameDate->copy()->startOfDay(),
-            'ends_at' => $gameDate->copy()->endOfDay(),
+            'start_at' => $startAt,
+            'end_at' => $startAt->copy()->addHours(24),
         ]);
     }
 
@@ -68,9 +67,8 @@ class GameDetailsPageTest extends TestCase
             ->where('gamePlays.per_page', 5000)
             ->has('gamePlays.data.0')
             ->has('gamePlays.data.0.id')
-            ->has('gamePlays.data.0.game_date')
-            ->has('gamePlays.data.0.starts_at')
-            ->has('gamePlays.data.0.ends_at')
+            ->has('gamePlays.data.0.start_at')
+            ->has('gamePlays.data.0.end_at')
         );
     }
 

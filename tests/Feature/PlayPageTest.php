@@ -43,7 +43,7 @@ class PlayPageTest extends TestCase
 
         $response->assertSuccessful();
 
-        $gamePlay = GamePlay::where('game_id', $game->id)->whereDate('game_date', '2026-09-01')->firstOrFail();
+        $gamePlay = GamePlay::where('game_id', $game->id)->firstOrFail();
 
         $response->assertInertia(fn (Assert $page) => $page
             ->component('games/Play')
@@ -56,9 +56,8 @@ class PlayPageTest extends TestCase
             ->has('gamePlay', fn (Assert $gamePlayAssert) => $gamePlayAssert
                 ->where('id', $gamePlay->id)
                 ->has('slug')
-                ->where('game_date', '2026-09-01')
-                ->has('starts_at')
-                ->has('ends_at')
+                ->where('start_at', $gamePlay->start_at->toISOString())
+                ->where('end_at', $gamePlay->end_at->toISOString())
                 ->has('board', fn (Assert $boardAssert) => $boardAssert
                     ->where('rows', $gamePlay->board['rows'])
                     ->where('cols', $gamePlay->board['cols'])
@@ -73,7 +72,7 @@ class PlayPageTest extends TestCase
                     ->has('how_to_play')
                     ->has('logo')
                 )
-                ->has('gameDifficulty', fn (Assert $difficultyAssert) => $difficultyAssert
+                ->has('game_difficulty', fn (Assert $difficultyAssert) => $difficultyAssert
                     ->where('id', $gamePlay->game_difficulty_id)
                     ->where('slug', $gamePlay->gameDifficulty->slug)
                     ->where('name', $gamePlay->gameDifficulty->name)
@@ -99,7 +98,7 @@ class PlayPageTest extends TestCase
 
         $this->assertSame($firstGamePlay['id'], $secondGamePlay['id']);
         $this->assertSame($firstGamePlay['board'], $secondGamePlay['board']);
-        $this->assertSame($firstGamePlay['gameDifficulty']['id'], $secondGamePlay['gameDifficulty']['id']);
+        $this->assertSame($firstGamePlay['game_difficulty']['id'], $secondGamePlay['game_difficulty']['id']);
         $this->assertSame(1, GamePlay::count());
     }
 
@@ -132,7 +131,7 @@ class PlayPageTest extends TestCase
 
         $response->assertSuccessful();
 
-        $gamePlay = GamePlay::where('game_id', $game->id)->whereDate('game_date', '2026-09-01')->firstOrFail();
+        $gamePlay = GamePlay::where('game_id', $game->id)->firstOrFail();
 
         $this->assertNotEmpty($gamePlay->slug);
     }

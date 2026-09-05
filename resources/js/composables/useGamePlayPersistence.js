@@ -7,7 +7,7 @@ const storageKeyFor = (gamePlayId, playerId) =>
     `${STORAGE_NAMESPACE}_${gamePlayId}_${playerId}`
 
 const expiresAtOf = (gamePlay) => {
-    for (const field of ['ends_at', 'endsAt']) {
+    for (const field of ['end_at', 'endAt']) {
         const value = gamePlay?.[field]
 
         if (value) {

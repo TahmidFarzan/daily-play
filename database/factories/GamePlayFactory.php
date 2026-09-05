@@ -18,8 +18,8 @@ class GamePlayFactory extends Factory
 
     public function definition(): array
     {
-        $gameDate = fake()->dateTimeBetween('today', '+1 year');
-        $gameDate = Carbon::instance($gameDate)->startOfDay();
+        $startAt = Carbon::instance(fake()->dateTimeBetween('today', '+1 year'));
+        $endAt = $startAt->copy()->addHours(24);
 
         $board = [];
         $game = Game::query()->inRandomOrder()->first();
@@ -29,7 +29,7 @@ class GamePlayFactory extends Factory
                     case 'zip':
                         $board = app(ZipBoardGenerator::class)->generate(
                             $game,
-                            $gameDate,
+                            $startAt,
                             $gameDifficulty
                         );
                         break;
@@ -42,10 +42,9 @@ class GamePlayFactory extends Factory
         return [
             'game_id'            => $game?->id,
             'game_difficulty_id' => $gameDifficulty?->id,
-            'game_date'          => $gameDate->toDateString(),
             'board'              => $board,
-            'starts_at'          => $gameDate->copy()->startOfDay(),
-            'ends_at'            => $gameDate->copy()->endOfDay(),
+            'start_at'           => $startAt,
+            'end_at'             => $endAt,
         ];
     }
 }

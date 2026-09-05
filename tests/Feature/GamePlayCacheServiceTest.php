@@ -52,12 +52,12 @@ class GamePlayCacheServiceTest extends TestCase
 
     protected function getFor(Game $game): GamePlay
     {
-        return $this->service()->getRecordByGameAndDate(CacheHelper::KEY_PLAY_GAME_PAGE, $game);
+        return $this->service()->getRecordByGame(CacheHelper::KEY_PLAY_GAME_PAGE, $game);
     }
 
-    public function test_first_request_generates_saves_and_returns_the_game_play(): void
+    public function test_first_request_preserves_the_exact_start_datetime_and_sets_end_24_hours_later(): void
     {
-        $this->travelTo(Carbon::parse('2026-09-01 09:00:00'));
+        $this->travelTo(Carbon::parse('2026-09-03 17:55:00'));
 
         $game = $this->createZipGame();
 
@@ -65,13 +65,25 @@ class GamePlayCacheServiceTest extends TestCase
 
         $this->assertSame(1, GamePlay::count());
         $this->assertSame($game->id, $gamePlay->game_id);
-        $this->assertSame('2026-09-01', $gamePlay->game_date->toDateString());
+        $this->assertSame('2026-09-03 17:55:00', $gamePlay->start_at->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-09-04 17:55:00', $gamePlay->end_at->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-09-03 17:55:00', $gamePlay->end_at->copy()->subHours(24)->format('Y-m-d H:i:s'));
         $this->assertNotNull($gamePlay->board);
-        $this->assertNotNull($gamePlay->starts_at);
-        $this->assertNotNull($gamePlay->ends_at);
         $this->assertTrue($gamePlay->relationLoaded('game'));
         $this->assertTrue($gamePlay->relationLoaded('gameDifficulty'));
         $this->assertTrue($gamePlay->game->relationLoaded('logo'));
+    }
+
+    public function test_start_at_is_not_forced_to_the_beginning_of_the_day(): void
+    {
+        $this->travelTo(Carbon::parse('2026-09-03 17:55:00'));
+
+        $game = $this->createZipGame();
+
+        $gamePlay = $this->getFor($game);
+
+        $this->assertSame('17:55:00', $gamePlay->start_at->format('H:i:s'));
+        $this->assertSame('17:55:00', $gamePlay->end_at->format('H:i:s'));
     }
 
     public function test_second_request_returns_the_same_game_play_without_regenerating(): void
@@ -135,11 +147,10 @@ class GamePlayCacheServiceTest extends TestCase
 
         $cached = $this->getFor($game);
 
-        $cacheKey = CacheHelper::cacheKeyGenerateSingleGamePlayRecordByGameAndDate(
+        $cacheKey = CacheHelper::cacheKeyGenerateSingleGamePlayRecordByGame(
             CacheHelper::KEY_PLAY_GAME_PAGE,
             CacheHelper::KEY_GAME_PLAY,
             $game,
-            '2026-09-01',
         );
 
         CacheServerHelper::clearCached($cacheKey, [
@@ -162,25 +173,56 @@ class GamePlayCacheServiceTest extends TestCase
         $this->assertEmpty($inserts, 'No insert query should run.');
     }
 
-    public function test_new_day_creates_a_new_game_play_while_the_same_day_keeps_its_own(): void
+    public function test_game_play_remains_active_across_midnight_and_keeps_the_same_board(): void
     {
-        $this->travelTo(Carbon::parse('2026-09-01 12:00:00'));
+        $this->travelTo(Carbon::parse('2026-09-03 17:55:00'));
 
         $game = $this->createZipGame();
 
-        $dayOne = $this->getFor($game);
-        $sameDay = $this->getFor($game);
+        $first = $this->getFor($game);
 
-        $this->assertSame($dayOne->id, $sameDay->id);
-        $this->assertSame($dayOne->board, $sameDay->board);
+        $this->assertSame('2026-09-04 17:55:00', $first->end_at->format('Y-m-d H:i:s'));
 
-        $this->travelTo(Carbon::parse('2026-09-02 12:00:00'));
+        $this->travelTo(Carbon::parse('2026-09-04 00:30:00'));
 
-        $dayTwo = $this->getFor($game);
+        $afterMidnight = $this->getFor($game);
 
-        $this->assertNotSame($dayOne->id, $dayTwo->id);
-        $this->assertNotSame($dayOne->board, $dayTwo->board);
-        $this->assertSame('2026-09-02', $dayTwo->game_date->toDateString());
+        $this->assertSame($first->id, $afterMidnight->id);
+        $this->assertSame($first->board, $afterMidnight->board);
+        $this->assertSame(1, GamePlay::count());
+    }
+
+    public function test_game_play_is_still_active_at_the_inclusive_end_boundary(): void
+    {
+        $this->travelTo(Carbon::parse('2026-09-03 17:55:00'));
+
+        $game = $this->createZipGame();
+
+        $first = $this->getFor($game);
+
+        $this->travelTo(Carbon::parse('2026-09-04 17:55:00'));
+
+        $atBoundary = $this->getFor($game);
+
+        $this->assertSame($first->id, $atBoundary->id);
+        $this->assertSame(1, GamePlay::count());
+    }
+
+    public function test_after_end_at_a_new_game_play_is_created(): void
+    {
+        $this->travelTo(Carbon::parse('2026-09-03 17:55:00'));
+
+        $game = $this->createZipGame();
+
+        $first = $this->getFor($game);
+
+        $this->travelTo(Carbon::parse('2026-09-04 17:55:01'));
+
+        $second = $this->getFor($game);
+
+        $this->assertNotSame($first->id, $second->id);
+        $this->assertSame('2026-09-04 17:55:01', $second->start_at->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-09-05 17:55:01', $second->end_at->format('Y-m-d H:i:s'));
         $this->assertSame(2, GamePlay::count());
     }
 

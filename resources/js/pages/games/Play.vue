@@ -4,7 +4,7 @@ import Layout from '@/pages/layouts/PublicLayout.vue'
 import GameBoard from '@/components/games/GameBoard.vue'
 import MediaRenderer from '@/components/common/media/MediaRenderer.vue'
 import PlayerModal from '@/components/players/PlayerModal.vue'
-import { formatDate, formatTime } from '@/composables/useDateTime'
+import { formatDate, formatTime , formatDateTime} from '@/composables/useDateTime'
 import { formatDurationMs, formatHumanDuration, isValidGameplayDurationMs, MAX_GAMEPLAY_DURATION_MS, useGamePlayTimer } from '@/composables/useGamePlayTimer'
 import { progressionColor, softTintColor } from '@/composables/progressColors'
 import {
@@ -19,6 +19,7 @@ import { useGamePlayPersistence } from '@/composables/useGamePlayPersistence'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import apiClient from '@/config/axios'
+
 
 import { library as FontAwesomeLibrary } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -49,7 +50,7 @@ const board = computed(() => gamePlay?.board ?? {})
 const difficulty = computed(() => gamePlay?.game_difficulty ?? null)
 
 const dailyDateLabel = computed(() =>
-    gamePlay?.game_date ? formatDate(gamePlay.game_date) : '',
+    formatDateTime(gamePlay.start_at) + " - " + formatDateTime(gamePlay.end_at),
 )
 
 const {
@@ -244,6 +245,7 @@ const verifyPlayer = async () => {
     }
 
     try {
+
         const response = await apiClient.get(route('players.get', {
             slug: cached.slug,
         }))
