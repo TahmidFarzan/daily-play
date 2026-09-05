@@ -13,7 +13,6 @@ return new class extends Migration
             $table->string('name');
             $table->string('slug')->unique();
             $table->text('brief')->nullable();
-            $table->json('config')->default('{}');
             $table->foreignId('created_by_id')->nullable()->constrained('users')->cascadeOnDelete();
             $table->timestamps();
         });
