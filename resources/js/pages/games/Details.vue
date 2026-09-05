@@ -4,6 +4,7 @@ import { Head, useForm, router as inertiaJsRouter } from "@inertiajs/vue3";
 import Layout from "@/pages/layouts/PublicLayout.vue";
 import MediaRenderer from "@/components/common/media/MediaRenderer.vue";
 import ModelPagination from "@/components/common/pagination/Pagination.vue";
+import InfiniteScrollApiSelect from "@/components/common/multi-select/InfiniteScrollApiSelect.vue";
 
 import { library as FontAwesomeLibrary } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
@@ -176,33 +177,28 @@ onMounted(() => {
                 </h2>
             </div>
 
-            <form
-                @submit.prevent="applyFilter"
-                class="mb-5 grid grid-cols-1 gap-3 rounded-xl border border-[var(--daily-play-border)] bg-gray-50 p-4 sm:grid-cols-2 lg:grid-cols-4"
-            >
-                <input
-                    v-model="filterForm.search"
-                    type="search"
-                    placeholder="Search by date..."
-                    class="w-full rounded-lg border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-3 py-2 text-sm text-[var(--daily-play-text)] transition focus:border-[var(--daily-play-accent)] focus:outline-none"
+            <form @submit.prevent="applyFilter"
+                class="mb-5 grid grid-cols-1 gap-3 rounded-xl border border-[var(--daily-play-border)] bg-gray-50 p-4 sm:grid-cols-2 lg:grid-cols-4">
+
+                <InfiniteScrollApiSelect
+                    :form="filterForm"
+                    fieldName="per_page"
+                    :selectedItem="filterForm.per_page || null"
+                    :apiUrl="route('search.per-pages')"
+                    :multiple="false"
+                    :compactDesign="true"
+                    selectedLabelKey="name"
+                    selectedValueKey="id"
+                    apiLabelKey="name"
+                    apiValueKey="id"
+                    placeholder="Per Page"
                 />
 
                 <input
                     v-model="filterForm.date"
                     type="date"
-                    class="w-full rounded-lg border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-3 py-2 text-sm text-[var(--daily-play-text)] transition focus:border-[var(--daily-play-accent)] focus:outline-none"
-                />
+                    class="w-full rounded-lg border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-3 py-2 text-sm text-[var(--daily-play-text)] transition focus:border-[var(--daily-play-accent)] focus:outline-none"/>
 
-                <select
-                    v-model="filterForm.per_page"
-                    class="w-full rounded-lg border border-[var(--daily-play-border)] bg-[var(--daily-play-background)] px-3 py-2 text-sm text-[var(--daily-play-text)] transition focus:border-[var(--daily-play-accent)] focus:outline-none"
-                >
-                    <option :value="null">Per Page</option>
-                    <option :value="5">5</option>
-                    <option :value="10">10</option>
-                    <option :value="25">25</option>
-                    <option :value="50">50</option>
-                </select>
 
                 <div class="flex items-center gap-2">
                     <button
@@ -237,6 +233,7 @@ onMounted(() => {
                         >
                             <th class="px-4 py-3">Sl</th>
                             <th class="px-4 py-3">Date</th>
+                            <th class="px-4 py-3">Diffculty</th>
                             <th class="px-4 py-3">Start Time</th>
                             <th class="px-4 py-3">End Time</th>
                             <th class="px-4 py-3 text-right">Action</th>
@@ -258,6 +255,11 @@ onMounted(() => {
                                 class="px-4 py-3 font-medium text-[var(--daily-play-text)]"
                             >
                                 {{ formatDate(item.game_date) }}
+                            </td>
+                            <td
+                                class="px-4 py-3 font-medium text-[var(--daily-play-text)]"
+                            >
+                                {{ item.game_difficulty?.name || "N/A" }}
                             </td>
                             <td class="px-4 py-3 text-[var(--daily-play-text)]">
                                 {{ formatClock(item.starts_at) }}

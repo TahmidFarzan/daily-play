@@ -113,16 +113,6 @@ class GamePlayCacheService
 
         $query = GamePlay::with(['gameDifficulty'])->where('game_id', $game->id);
 
-        if ($request->filled('search')) {
-            $search = $request->input('search');
-            $likeSearch = "%{$search}%";
-
-            $query->whereAny([
-                'game_date',
-                'slug',
-            ], 'like', $likeSearch);
-        }
-
         if ($request->filled('date')) {
             $date = $request->input('date');
             $date = is_string($date) ? new \DateTime($date) : $date;
