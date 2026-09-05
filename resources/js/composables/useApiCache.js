@@ -23,6 +23,7 @@ export const apiCacheTTL = Object.freeze({
     SYSTEM_LONG: 1800,
 
     API_USER: 30,
+    API_PLAYER: 300,
 
     MODEL_CURSOR_PAGINATION: 30,
     MODEL_PAGINATION: 30,
@@ -35,6 +36,7 @@ export const apiCacheKey = Object.freeze({
     API_TINYMCE: "api:tinymce",
 
     API_USER: "api:user",
+    API_PLAYER: "api:player",
 
     MODEL_CURSOR_PAGINATION: "model-cursor-pagination",
     MODEL_PAGINATION: "model-pagination",

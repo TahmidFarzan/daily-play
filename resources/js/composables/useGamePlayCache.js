@@ -66,7 +66,7 @@ const isValidSnapshot = (snapshot) => {
 const isExpired = (snapshot) =>
     Number.isFinite(snapshot?.expiresAt) && Date.now() >= snapshot.expiresAt
 
-export function useGamePlayPersistence(gamePlayRef, playerRef) {
+export function useGamePlayCache(gamePlayRef, playerRef) {
     const currentGamePlayId = () => gamePlayRef.value?.id ?? null
 
     const currentPlayerId = () => playerRef.value?.id ?? null

@@ -14,12 +14,11 @@ import {
     stopPlayerCacheExpiration,
     subscribePlayerCacheChanges,
 } from '@/composables/playerCache'
-import { useGamePlayPersistence } from '@/composables/useGamePlayPersistence'
+import { fetchFromApi, postToApi } from '@/composables/useApiClient'
+import { apiCacheKey, apiCacheTTL } from '@/composables/useApiCache'
+import { useGamePlayCache } from '@/composables/useGamePlayCache'
 
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-
-import apiClient from '@/config/axios'
-
 
 import { library as FontAwesomeLibrary } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -78,7 +77,7 @@ const {
     restore: restorePersistence,
     save: savePersistence,
     clear: clearPersistence,
-} = useGamePlayPersistence(gamePlayRef, currentPlayer)
+} = useGamePlayCache(gamePlayRef, currentPlayer)
 
 const initialState = computed(() =>
     restorationReady.value ? restoredGameState.value : null,
@@ -244,33 +243,27 @@ const verifyPlayer = async () => {
         return
     }
 
-    try {
-
-        const response = await apiClient.get(route('players.get', {
+    const data = await fetchFromApi(
+        route('players.get', {
             slug: cached.slug,
-        }))
-
-        const data = response?.data
-
-        if (data?.status === 'success' && data?.data) {
-            const backendPlayer = data.data
-            setPlayerCache(backendPlayer)
-            activateGameplay(backendPlayer)
-            return
+        }),
+        {},
+        {
+            key: `${apiCacheKey.API_PLAYER}:${cached.slug}`,
+            ttl: apiCacheTTL.API_PLAYER,
         }
+    )
 
-        throw new Error('Invalid player response')
-    } catch (error) {
-        if (error?.response?.status === 404) {
-            removePlayerCache()
-            playerLoading.value = false
-            playerModalOpen.value = true
-            return
-        }
-
-        playerLoading.value = false
-        playerError.value = 'Unable to verify your profile right now. Please try again.'
+    if (data?.status === 'success' && data?.data) {
+        const backendPlayer = data.data
+        setPlayerCache(backendPlayer)
+        activateGameplay(backendPlayer)
+        return
     }
+
+    removePlayerCache()
+    playerLoading.value = false
+    playerModalOpen.value = true
 }
 
 const retryPlayer = () => {
@@ -341,28 +334,22 @@ const submitScore = async () => {
 
     const targetSlug = gamePlay?.game?.slug
 
-    try {
-        const response = await apiClient.post(route('games.score.save', {
-            slug: targetSlug,
-        }), {
-            player_id: currentPlayer.value?.id,
-            duration_ms: durationMs,
-            backtracks: backtrackCount.value,
-        })
+    const data = await postToApi(route('games.score.save', {
+        slug: targetSlug,
+    }), {
+        player_id: currentPlayer.value?.id,
+        duration_ms: durationMs,
+        backtracks: backtrackCount.value,
+    })
 
-        const data = response?.data
-
-        if (data?.status === 'success' && data?.data) {
-            scoreResult.value = data.data
-            scoreState.value = 'success'
-            return
-        }
-
-        throw new Error(data?.message || 'Failed to save score.')
-    } catch (error) {
-        scoreState.value = 'error'
-        scoreError.value = 'Failed to save your score. Please try again.'
+    if (data?.status === 'success' && data?.data) {
+        scoreResult.value = data.data
+        scoreState.value = 'success'
+        return
     }
+
+    scoreState.value = 'error'
+    scoreError.value = 'Failed to save your score. Please try again.'
 }
 
 const closeResult = () => {
