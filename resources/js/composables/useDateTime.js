@@ -1,4 +1,4 @@
-import { format, parseISO } from "date-fns";
+import { format, parse, parseISO } from 'date-fns'
 
 const appDateFormat = import.meta.env.VITE_DATE_FORMAT || "d-M-Y";
 const appTimeFormat = import.meta.env.VITE_TIME_FORMAT || "hh:mm:ss a";
@@ -43,35 +43,37 @@ function convertLaravelTimeToDateFns(phpTimeFormat) {
 }
 
 function parseDateTime(datetime) {
-    if (!datetime) return new Date()
-    if (datetime instanceof Date) return datetime
+    if (!datetime) {
+        return new Date()
+    }
 
-    if (typeof datetime === "string") {
-        let normalized = datetime.trim().replace(" ", "T")
+    if (datetime instanceof Date) {
+        return datetime
+    }
 
-        // ISO case
-        if (/Z$|[+-]\d{2}:?\d{2}$/.test(normalized)) {
+    if (typeof datetime === 'string') {
+        const normalized = datetime.trim().replace(' ', 'T')
+
+        // Time only: HH:mm or HH:mm:ss
+        if (/^\d{2}:\d{2}(:\d{2})?$/.test(normalized)) {
+            return parse(
+                normalized,
+                normalized.length === 5 ? 'HH:mm' : 'HH:mm:ss',
+                new Date()
+            )
+        }
+
+        // ISO datetime/date
+        if (/^\d{4}-\d{2}-\d{2}/.test(normalized)) {
             return parseISO(normalized)
         }
 
-        try {
-            return parseISO(normalized)
-        } catch (_) {}
+        // Fallback
+        const parsed = new Date(normalized)
 
-        const candidates = [
-            "yyyy-MM-dd HH:mm:ss",
-            "yyyy-MM-dd HH:mm:ss.SSSSSS",
-            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",
-            "yyyy-MM-dd",
-        ]
-
-        for (const fmt of candidates) {
-            try {
-                return parse(normalized, fmt, new Date())
-            } catch (_) {}
+        if (!isNaN(parsed.getTime())) {
+            return parsed
         }
-
-        return new Date(normalized)
     }
 
     return new Date(datetime)
@@ -91,15 +93,18 @@ export const formatDate = (date, formatStr = null) => {
 
 export const formatTime = (time, formatStr = null) => {
     try {
-        formatStr = formatStr || appTimeFormat;
-        const jsFormat = convertLaravelTimeToDateFns(formatStr);
-        const timeToFormat = parseDateTime(time);
-        return format(timeToFormat, jsFormat);
+        formatStr = formatStr || appTimeFormat
+
+        const jsFormat = convertLaravelTimeToDateFns(formatStr)
+
+        const timeToFormat = parseDateTime(time)
+
+        return format(timeToFormat, jsFormat)
     } catch (e) {
-        console.warn("Invalid time:", time, e);
-        return "Invalid time";
+        console.warn('Invalid time:', time, e)
+        return 'Invalid time'
     }
-};
+}
 
 export const formatDateTime = (datetime, formatStr = null) => {
     try {
